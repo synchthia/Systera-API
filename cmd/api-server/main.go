@@ -3,8 +3,20 @@ package main
 import (
 	"io"
 	"log"
+	"net"
 	"os"
+
+	"gitlab.com/Startail/Systera-API/database"
+	"gitlab.com/Startail/Systera-API/server"
 )
+
+func startGRPC(port string) error {
+	lis, err := net.Listen("tcp", port)
+	if err != nil {
+		return err
+	}
+	return server.NewGRPCServer().Serve(lis)
+}
 
 func main() {
 	// Enable Logging to file
@@ -18,4 +30,21 @@ func main() {
 
 	// Init
 	log.Printf("[API]: Starting SYSTERA-API Server...")
+
+	// MongoDB
+	database.NewMongoSession()
+
+	// gRPC
+	wait := make(chan struct{})
+	go func() {
+		defer close(wait)
+		port := os.Getenv("GRPC_LISTEN_PORT")
+		if len(port) == 0 {
+			port = ":17300"
+		}
+		if err := startGRPC(port); err != nil {
+			log.Fatalf("[!!!]: gRPC ERROR: %s", err)
+		}
+	}()
+	<-wait
 }

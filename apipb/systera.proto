@@ -1,0 +1,30 @@
+syntax = "proto3";
+package apipb;
+
+option java_package = "net.synchthia.api.systera";
+option java_outer_classname = "SysteraProtos";
+
+service Systera {
+    rpc ActionStream (StreamRequest) returns (stream ActionStreamResponse) {}
+    rpc Announce(AnnounceRequest) returns (Empty) {}
+
+    rpc InitPlayerProfile (InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
+    rpc FetchPlayerProfile (FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
+}
+
+message StreamRequest { string name = 1; }
+message ActionStreamResponse { string type = 1; string cmd = 2; }
+
+message AnnounceRequest { string message = 1; }
+message Empty {}
+
+/*
+ * PLAYER PROFILE
+ */
+message InitPlayerProfileRequest { string playerUUID = 1; string playerName = 2; string playerIPAddress = 3; }
+message InitPlayerProfileResponse { bool hasProfile = 1; }
+
+message FetchPlayerProfileRequest { string playerUUID = 1; }
+message FetchPlayerProfileResponse {
+  map<string, bool> settings = 1;
+}
