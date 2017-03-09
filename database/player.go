@@ -11,15 +11,15 @@ import (
 )
 
 type PlayerData struct {
-	ID             bson.ObjectId    `bson:"_id,omitempty"`
-	UUID           string           `bson:"uuid" json:"id"`
-	Name           string           `bson:"name"`
-	NameLower      string           `bson:"name_lower"`
-	Groups         []string         `bson:"groups"`
-	Stats          PlayerStats      `bson:"stats"`
-	KnownUsernames map[string]int64 `bson:"known_usernames"`
-	KnownAddresses map[string]int64 `bson:"known_addresses"`
-	Settings       PlayerSettings   `bson:"settings"`
+	ID             bson.ObjectId          `bson:"_id,omitempty"`
+	UUID           string                 `bson:"uuid" json:"id"`
+	Name           string                 `bson:"name"`
+	NameLower      string                 `bson:"name_lower"`
+	Groups         []string               `bson:"groups"`
+	Stats          PlayerStats            `bson:"stats"`
+	KnownUsernames map[string]int64       `bson:"known_usernames"`
+	KnownAddresses map[string]int64       `bson:"known_addresses"`
+	Settings       map[string]interface{} `bson:"settings"`
 }
 
 type PlayerStats struct {
@@ -91,6 +91,27 @@ func CheckHasProfile(uuid string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func Find(uuid string) (PlayerData, error) {
+	session := GetMongoSession().Copy()
+	defer session.Close()
+	coll := session.DB("systera").C("players")
+	playerData := PlayerData{}
+
+	err := coll.Find(bson.M{"uuid": uuid}).One(&playerData)
+	return playerData, err
+}
+
+func FindByName(name string) (PlayerData, error) {
+	session := GetMongoSession().Copy()
+	defer session.Close()
+	coll := session.DB("systera").C("players")
+	playerData := PlayerData{}
+
+	nameLower := strings.ToLower(name)
+	err := coll.Find(bson.M{"name_lower": nameLower}).One(&playerData)
+	return playerData, err
 }
 
 func InitPlayerProfile(uuid string, name string, ipaddress string) (bool, error) {
