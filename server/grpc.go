@@ -65,6 +65,9 @@ func (s *grpcServer) ActionStream(r *pb.StreamRequest, as pb.Systera_ActionStrea
 }
 
 func (s *grpcServer) Announce(ctx context.Context, e *pb.AnnounceRequest) (*pb.Empty, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	for c := range s.asrChans {
 		c <- pb.ActionStreamResponse{Type: "dispatch", Cmd: e.Message}
 	}
