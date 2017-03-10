@@ -80,6 +80,7 @@ func (s *grpcServer) InitPlayerProfile(ctx context.Context, e *pb.InitPlayerProf
 }
 
 func (s *grpcServer) FetchPlayerProfile(ctx context.Context, e *pb.FetchPlayerProfileRequest) (*pb.FetchPlayerProfileResponse, error) {
-	settings, err := database.FetchPlayerSettings(e.PlayerUUID)
-	return &pb.FetchPlayerProfileResponse{Settings: settings}, err
+	//settings, err := database.FetchPlayerSettings(e.PlayerUUID)
+	playerData, err := database.Find(e.PlayerUUID)
+	return &pb.FetchPlayerProfileResponse{Settings: playerData.Settings}, err
 }

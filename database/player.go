@@ -2,7 +2,6 @@ package database
 
 import (
 	"log"
-	"reflect"
 	"strings"
 	"time"
 
@@ -11,15 +10,15 @@ import (
 )
 
 type PlayerData struct {
-	ID             bson.ObjectId          `bson:"_id,omitempty"`
-	UUID           string                 `bson:"uuid" json:"id"`
-	Name           string                 `bson:"name"`
-	NameLower      string                 `bson:"name_lower"`
-	Groups         []string               `bson:"groups"`
-	Stats          PlayerStats            `bson:"stats"`
-	KnownUsernames map[string]int64       `bson:"known_usernames"`
-	KnownAddresses map[string]int64       `bson:"known_addresses"`
-	Settings       map[string]interface{} `bson:"settings"`
+	ID             bson.ObjectId    `bson:"_id,omitempty"`
+	UUID           string           `bson:"uuid" json:"id"`
+	Name           string           `bson:"name"`
+	NameLower      string           `bson:"name_lower"`
+	Groups         []string         `bson:"groups"`
+	Stats          PlayerStats      `bson:"stats"`
+	KnownUsernames map[string]int64 `bson:"known_usernames"`
+	KnownAddresses map[string]int64 `bson:"known_addresses"`
+	Settings       map[string]bool  `bson:"settings"`
 }
 
 type PlayerStats struct {
@@ -31,20 +30,6 @@ type PlayerStats struct {
 type PlayerSettings struct {
 	Vanish   bool `bson:"vanish"`
 	Japanize bool `bson:"japanize"`
-}
-
-func StructToMap(data interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
-	elem := reflect.ValueOf(data).Elem()
-	size := elem.NumField()
-
-	for i := 0; i < size; i++ {
-		field := elem.Type().Field(i).Tag.Get("bson")
-		value := elem.Field(i).Interface()
-		result[field] = value
-	}
-
-	return result
 }
 
 func UUIDToName(uuid string) string {
@@ -155,7 +140,7 @@ func InitPlayerProfile(uuid string, name string, ipaddress string) (bool, error)
 	return hasProfile, nil
 }
 
-func FetchPlayerSettings(uuid string) (map[string]bool, error) {
+/*func FetchPlayerSettings(uuid string) (map[string]bool, error) {
 	session := GetMongoSession().Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
@@ -173,7 +158,7 @@ func FetchPlayerSettings(uuid string) (map[string]bool, error) {
 	}
 
 	return mapped, nil
-}
+}*/
 
 func PushPlayerSettings(uuid string, settings map[string]bool) (bool, error) {
 	session := GetMongoSession().Copy()
