@@ -4,19 +4,29 @@ package apipb;
 option java_package = "net.synchthia.api.systera";
 option java_outer_classname = "SysteraProtos";
 
+message Empty {}
+
+/*
+ * Systera API
+ */
 service Systera {
-    rpc ActionStream (StreamRequest) returns (stream ActionStreamResponse) {}
-    rpc Announce(AnnounceRequest) returns (Empty) {}
+  rpc ActionStream (StreamRequest) returns (stream ActionStreamResponse) {}
+  rpc Announce(AnnounceRequest) returns (Empty) {}
+  rpc QuitStream(QuitStreamRequest) returns (Empty) {}
 
     rpc InitPlayerProfile (InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
     rpc FetchPlayerProfile (FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
 }
 
-message StreamRequest { string name = 1; }
-message ActionStreamResponse { string type = 1; string cmd = 2; }
+/*
+ * Stream API
+ */
+enum StreamType { QUIT = 0; DISPATCH = 1; }
+message StreamRequest { string name = 1; StreamType type = 2; }
+message ActionStreamResponse { StreamType type = 1; string target = 2; string cmd = 3; }
 
-message AnnounceRequest { string message = 1; }
-message Empty {}
+message AnnounceRequest { string target = 1; string message = 2; }
+message QuitStreamRequest { string name = 1; }
 
 /*
  * PLAYER PROFILE

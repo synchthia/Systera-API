@@ -1,7 +1,8 @@
 package server
 
 import (
-	"fmt"
+	"log"
+	"strings"
 	"sync"
 
 	"golang.org/x/net/context"
@@ -12,7 +13,9 @@ import (
 )
 
 type Server interface {
-	Announce(msg string)
+	Announce(target, msg string)
+	QuitStream(name string)
+
 	InitPlayerProfile(playerUUID, playerName, ipAddress string) (bool, error)
 	FetchPlayerProfile(playerUUID string) (map[string]bool, error)
 }
@@ -40,27 +43,33 @@ func (s *grpcServer) ActionStream(r *pb.StreamRequest, as pb.Systera_ActionStrea
 	s.mu.Lock()
 	s.asrChans[ech] = struct{}{}
 	s.mu.Unlock()
-	fmt.Println("Added New Watcher", ech)
+	log.Printf("[Action/ST]: Added New Watcher: %s (%v)", r.Name, ech)
+	log.Printf("[Action/ST]: -> Currently Watcher: %d", len(s.asrChans))
 
 	defer func() {
 		s.mu.Lock()
 		delete(s.asrChans, ech)
 		s.mu.Unlock()
 		close(ech)
-		fmt.Println("Deleted Watcher", ech)
+		log.Printf("[Action/ST]: Deleted Watcher: %v", ech)
 	}()
 
-	fmt.Println("sending")
-
 	for e := range ech {
-		/*if !strings.HasPrefix(e.Message, r.Name) {
+		if e.Target != "GLOBAL" && !strings.HasPrefix(e.Target, r.Name) {
 			continue
-		}*/
+		}
+
+		log.Printf("[Action/ST]: Requested (%s / Target: %s) [%s >> %s]", e.Type, e.Target, r.Name, e.Cmd)
+		if e.Type == pb.StreamType_QUIT {
+			return nil
+		}
+
 		err := as.Send(&e)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -69,7 +78,17 @@ func (s *grpcServer) Announce(ctx context.Context, e *pb.AnnounceRequest) (*pb.E
 	defer s.mu.Unlock()
 
 	for c := range s.asrChans {
-		c <- pb.ActionStreamResponse{Type: "dispatch", Cmd: e.Message}
+		c <- pb.ActionStreamResponse{Type: pb.StreamType_DISPATCH, Target: e.Target, Cmd: e.Message}
+	}
+	return &pb.Empty{}, nil
+}
+
+func (s *grpcServer) QuitStream(ctx context.Context, e *pb.QuitStreamRequest) (*pb.Empty, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for c := range s.asrChans {
+		c <- pb.ActionStreamResponse{Type: pb.StreamType_QUIT, Target: e.Name}
 	}
 	return &pb.Empty{}, nil
 }
