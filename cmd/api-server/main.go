@@ -42,6 +42,8 @@ func main() {
 		if len(port) == 0 {
 			port = ":17300"
 		}
+
+		log.Printf("[GRPC]: Listening %s", port)
 		if err := startGRPC(port); err != nil {
 			log.Fatalf("[!!!]: gRPC ERROR: %s", err)
 		}
