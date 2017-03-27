@@ -14,8 +14,11 @@ service Systera {
   rpc Announce(AnnounceRequest) returns (Empty) {}
   rpc QuitStream(QuitStreamRequest) returns (Empty) {}
 
-    rpc InitPlayerProfile (InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
-    rpc FetchPlayerProfile (FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
+  rpc InitPlayerProfile (InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
+  rpc FetchPlayerProfile (FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
+
+  rpc SetPlayerServer (SetPlayerServerRequest) returns (Empty);
+  rpc RemovePlayerServer (RemovePlayerServerRequest) returns (Empty);
 }
 
 /*
@@ -38,3 +41,6 @@ message FetchPlayerProfileRequest { string playerUUID = 1; }
 message FetchPlayerProfileResponse {
   map<string, bool> settings = 1;
 }
+
+message SetPlayerServerRequest { string playerUUID = 1; string serverName = 2; }
+message RemovePlayerServerRequest { string playerUUID = 1; string serverName = 2; }

@@ -140,25 +140,42 @@ func InitPlayerProfile(uuid string, name string, ipaddress string) (bool, error)
 	return hasProfile, nil
 }
 
-/*func FetchPlayerSettings(uuid string) (map[string]bool, error) {
+func SetPlayerServer(uuid, server string) error {
+	session := GetMongoSession().Copy()
+	defer session.Close()
+	coll := session.DB("systera").C("players")
+
+	playerData := PlayerData{}
+	coll.Find(bson.M{"uuid": uuid}).One(&playerData)
+
+	err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"stats.current_server": server}})
+	if err != nil {
+		log.Printf("[!!!]: failed execute SetPlayerServer from MongoDB %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func RemovePlayerServer(uuid, server string) error {
 	session := GetMongoSession().Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 
 	playerData := PlayerData{}
 	err := coll.Find(bson.M{"uuid": uuid}).One(&playerData)
+
+	if playerData.Stats.CurrentServer == server {
+		err = coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"stats.current_server": ""}})
+	}
+
 	if err != nil {
-		return nil, err
+		log.Printf("[!!!]: failed execute RemovePlayerServer from MongoDB %s", err)
+		return err
 	}
 
-	structed := StructToMap(&playerData.Settings)
-	mapped := make(map[string]bool)
-	for key, value := range structed {
-		mapped[key] = value.(bool)
-	}
-
-	return mapped, nil
-}*/
+	return nil
+}
 
 func PushPlayerSettings(uuid string, settings map[string]bool) (bool, error) {
 	session := GetMongoSession().Copy()
