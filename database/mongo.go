@@ -21,7 +21,7 @@ func NewMongoSession() {
 
 	s, err := mgo.DialWithInfo(di)
 	if err != nil {
-		log.Printf("[!!!]: Error @ during Connecting Mongo: %s", err)
+		log.Fatalf("[!!!]: Error @ during Connecting Mongo: %s", err)
 		return
 	}
 
