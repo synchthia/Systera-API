@@ -177,7 +177,7 @@ func RemovePlayerServer(uuid, server string) error {
 	return nil
 }
 
-func PushPlayerSettings(uuid string, settings map[string]bool) (bool, error) {
+func PushPlayerSettings(uuid, key string, value bool) error {
 	session := GetMongoSession().Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
@@ -185,16 +185,11 @@ func PushPlayerSettings(uuid string, settings map[string]bool) (bool, error) {
 	playerData := PlayerData{}
 	coll.Find(bson.M{"uuid": uuid}).One(&playerData)
 
-	maps := make(map[string]bool)
-	maps = settings
-
-	for key, value := range maps {
-		err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"settings." + key: value}})
-		if err != nil {
-			log.Printf("[!!!]: failed execute PushPlayerSettings from MongoDB: %s", err)
-			return false, err
-		}
+	err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"settings." + key: value}})
+	if err != nil {
+		log.Printf("[!!!]: failed execute PushPlayerSettings from MongoDB: %s", err)
+		return err
 	}
 
-	return false, nil
+	return nil
 }

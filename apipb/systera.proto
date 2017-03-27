@@ -19,6 +19,7 @@ service Systera {
 
   rpc SetPlayerServer (SetPlayerServerRequest) returns (Empty);
   rpc RemovePlayerServer (RemovePlayerServerRequest) returns (Empty);
+  rpc SetPlayerSettings (SetPlayerSettingsRequest) returns (Empty);
 }
 
 /*
@@ -44,3 +45,5 @@ message FetchPlayerProfileResponse {
 
 message SetPlayerServerRequest { string playerUUID = 1; string serverName = 2; }
 message RemovePlayerServerRequest { string playerUUID = 1; string serverName = 2; }
+
+message SetPlayerSettingsRequest { string playerUUID = 1; string key = 2; bool value = 3; }

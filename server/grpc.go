@@ -20,6 +20,7 @@ type Server interface {
 	FetchPlayerProfile(playerUUID string) (map[string]bool, error)
 
 	SetPlayerServer(playerUUID, serverName string) error
+	SetPlayerSettings(playerUUID, key string, value bool) error
 }
 
 type grpcServer struct {
@@ -101,7 +102,6 @@ func (s *grpcServer) InitPlayerProfile(ctx context.Context, e *pb.InitPlayerProf
 }
 
 func (s *grpcServer) FetchPlayerProfile(ctx context.Context, e *pb.FetchPlayerProfileRequest) (*pb.FetchPlayerProfileResponse, error) {
-	//settings, err := database.FetchPlayerSettings(e.PlayerUUID)
 	playerData, err := database.Find(e.PlayerUUID)
 	return &pb.FetchPlayerProfileResponse{Settings: playerData.Settings}, err
 }
@@ -118,5 +118,10 @@ func (s *grpcServer) RemovePlayerServer(ctx context.Context, e *pb.RemovePlayerS
 		err = database.SetPlayerServer(e.PlayerUUID, "")
 	}
 
+	return &pb.Empty{}, err
+}
+
+func (s *grpcServer) SetPlayerSettings(ctx context.Context, e *pb.SetPlayerSettingsRequest) (*pb.Empty, error) {
+	err := database.PushPlayerSettings(e.PlayerUUID, e.Key, e.Value)
 	return &pb.Empty{}, err
 }
