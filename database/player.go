@@ -10,15 +10,16 @@ import (
 )
 
 type PlayerData struct {
-	ID             bson.ObjectId    `bson:"_id,omitempty"`
-	UUID           string           `bson:"uuid" json:"id"`
-	Name           string           `bson:"name"`
-	NameLower      string           `bson:"name_lower"`
-	Groups         []string         `bson:"groups"`
-	Stats          PlayerStats      `bson:"stats"`
-	KnownUsernames map[string]int64 `bson:"known_usernames"`
-	KnownAddresses map[string]int64 `bson:"known_addresses"`
-	Settings       map[string]bool  `bson:"settings"`
+	ID                 bson.ObjectId    `bson:"_id,omitempty"`
+	UUID               string           `bson:"uuid" json:"id"`
+	Name               string           `bson:"name"`
+	NameLower          string           `bson:"name_lower"`
+	Groups             []string         `bson:"groups"`
+	Stats              PlayerStats      `bson:"stats"`
+	KnownUsernames     map[string]int64 `bson:"known_usernames"`
+	KnownUsernameLower map[string]int64 `bson:"known_usernames_lower"`
+	KnownAddresses     map[string]int64 `bson:"known_addresses"`
+	Settings           map[string]bool  `bson:"settings"`
 }
 
 type PlayerStats struct {
@@ -95,11 +96,11 @@ func FindByName(name string) (PlayerData, error) {
 	playerData := PlayerData{}
 
 	nameLower := strings.ToLower(name)
-	err := coll.Find(bson.M{"name_lower": nameLower}).One(&playerData)
+	err := coll.Find(bson.M{"name_lower": nameLower}).Sort("-stats.last_login").One(&playerData)
 	return playerData, err
 }
 
-func InitPlayerProfile(uuid string, name string, ipaddress string) (bool, error) {
+func InitPlayerProfile(uuid, name, ipaddress string) (bool, error) {
 	session := GetMongoSession().Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
@@ -131,9 +132,11 @@ func InitPlayerProfile(uuid string, name string, ipaddress string) (bool, error)
 	}
 	if playerData.KnownUsernames == nil {
 		playerData.KnownUsernames = make(map[string]int64)
+		playerData.KnownUsernameLower = make(map[string]int64)
 	}
 	playerData.KnownAddresses[strings.NewReplacer(".", "_").Replace(ipaddress)] = nowtime
 	playerData.KnownUsernames[playerData.Name] = nowtime
+	playerData.KnownUsernameLower[playerData.NameLower] = nowtime
 
 	log.Printf("[InitPlayerProfile]: %s(%s) from %s", name, uuid, ipaddress)
 	coll.Upsert(bson.M{"uuid": uuid}, bson.M{"$set": &playerData})
