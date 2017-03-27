@@ -9,14 +9,18 @@ It is generated from these files:
 	systera.proto
 
 It has these top-level messages:
+	Empty
 	StreamRequest
 	ActionStreamResponse
 	AnnounceRequest
-	Empty
+	QuitStreamRequest
 	InitPlayerProfileRequest
 	InitPlayerProfileResponse
 	FetchPlayerProfileRequest
 	FetchPlayerProfileResponse
+	SetPlayerSettingsRequest
+	SetPlayerServerRequest
+	RemovePlayerServerRequest
 */
 package apipb
 
@@ -40,14 +44,46 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+//
+// Stream API
+type StreamType int32
+
+const (
+	StreamType_QUIT     StreamType = 0
+	StreamType_DISPATCH StreamType = 1
+)
+
+var StreamType_name = map[int32]string{
+	0: "QUIT",
+	1: "DISPATCH",
+}
+var StreamType_value = map[string]int32{
+	"QUIT":     0,
+	"DISPATCH": 1,
+}
+
+func (x StreamType) String() string {
+	return proto.EnumName(StreamType_name, int32(x))
+}
+func (StreamType) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+type Empty struct {
+}
+
+func (m *Empty) Reset()                    { *m = Empty{} }
+func (m *Empty) String() string            { return proto.CompactTextString(m) }
+func (*Empty) ProtoMessage()               {}
+func (*Empty) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
 type StreamRequest struct {
-	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Name string     `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Type StreamType `protobuf:"varint,2,opt,name=type,enum=apipb.StreamType" json:"type,omitempty"`
 }
 
 func (m *StreamRequest) Reset()                    { *m = StreamRequest{} }
 func (m *StreamRequest) String() string            { return proto.CompactTextString(m) }
 func (*StreamRequest) ProtoMessage()               {}
-func (*StreamRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*StreamRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
 func (m *StreamRequest) GetName() string {
 	if m != nil {
@@ -56,19 +92,34 @@ func (m *StreamRequest) GetName() string {
 	return ""
 }
 
+func (m *StreamRequest) GetType() StreamType {
+	if m != nil {
+		return m.Type
+	}
+	return StreamType_QUIT
+}
+
 type ActionStreamResponse struct {
-	Type string `protobuf:"bytes,1,opt,name=type" json:"type,omitempty"`
-	Cmd  string `protobuf:"bytes,2,opt,name=cmd" json:"cmd,omitempty"`
+	Type   StreamType `protobuf:"varint,1,opt,name=type,enum=apipb.StreamType" json:"type,omitempty"`
+	Target string     `protobuf:"bytes,2,opt,name=target" json:"target,omitempty"`
+	Cmd    string     `protobuf:"bytes,3,opt,name=cmd" json:"cmd,omitempty"`
 }
 
 func (m *ActionStreamResponse) Reset()                    { *m = ActionStreamResponse{} }
 func (m *ActionStreamResponse) String() string            { return proto.CompactTextString(m) }
 func (*ActionStreamResponse) ProtoMessage()               {}
-func (*ActionStreamResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*ActionStreamResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
-func (m *ActionStreamResponse) GetType() string {
+func (m *ActionStreamResponse) GetType() StreamType {
 	if m != nil {
 		return m.Type
+	}
+	return StreamType_QUIT
+}
+
+func (m *ActionStreamResponse) GetTarget() string {
+	if m != nil {
+		return m.Target
 	}
 	return ""
 }
@@ -81,13 +132,21 @@ func (m *ActionStreamResponse) GetCmd() string {
 }
 
 type AnnounceRequest struct {
-	Message string `protobuf:"bytes,1,opt,name=message" json:"message,omitempty"`
+	Target  string `protobuf:"bytes,1,opt,name=target" json:"target,omitempty"`
+	Message string `protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
 }
 
 func (m *AnnounceRequest) Reset()                    { *m = AnnounceRequest{} }
 func (m *AnnounceRequest) String() string            { return proto.CompactTextString(m) }
 func (*AnnounceRequest) ProtoMessage()               {}
-func (*AnnounceRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*AnnounceRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *AnnounceRequest) GetTarget() string {
+	if m != nil {
+		return m.Target
+	}
+	return ""
+}
 
 func (m *AnnounceRequest) GetMessage() string {
 	if m != nil {
@@ -96,13 +155,21 @@ func (m *AnnounceRequest) GetMessage() string {
 	return ""
 }
 
-type Empty struct {
+type QuitStreamRequest struct {
+	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 }
 
-func (m *Empty) Reset()                    { *m = Empty{} }
-func (m *Empty) String() string            { return proto.CompactTextString(m) }
-func (*Empty) ProtoMessage()               {}
-func (*Empty) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (m *QuitStreamRequest) Reset()                    { *m = QuitStreamRequest{} }
+func (m *QuitStreamRequest) String() string            { return proto.CompactTextString(m) }
+func (*QuitStreamRequest) ProtoMessage()               {}
+func (*QuitStreamRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+func (m *QuitStreamRequest) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
 
 //
 // PLAYER PROFILE
@@ -115,7 +182,7 @@ type InitPlayerProfileRequest struct {
 func (m *InitPlayerProfileRequest) Reset()                    { *m = InitPlayerProfileRequest{} }
 func (m *InitPlayerProfileRequest) String() string            { return proto.CompactTextString(m) }
 func (*InitPlayerProfileRequest) ProtoMessage()               {}
-func (*InitPlayerProfileRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (*InitPlayerProfileRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
 func (m *InitPlayerProfileRequest) GetPlayerUUID() string {
 	if m != nil {
@@ -145,7 +212,7 @@ type InitPlayerProfileResponse struct {
 func (m *InitPlayerProfileResponse) Reset()                    { *m = InitPlayerProfileResponse{} }
 func (m *InitPlayerProfileResponse) String() string            { return proto.CompactTextString(m) }
 func (*InitPlayerProfileResponse) ProtoMessage()               {}
-func (*InitPlayerProfileResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (*InitPlayerProfileResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
 func (m *InitPlayerProfileResponse) GetHasProfile() bool {
 	if m != nil {
@@ -161,7 +228,7 @@ type FetchPlayerProfileRequest struct {
 func (m *FetchPlayerProfileRequest) Reset()                    { *m = FetchPlayerProfileRequest{} }
 func (m *FetchPlayerProfileRequest) String() string            { return proto.CompactTextString(m) }
 func (*FetchPlayerProfileRequest) ProtoMessage()               {}
-func (*FetchPlayerProfileRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (*FetchPlayerProfileRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
 func (m *FetchPlayerProfileRequest) GetPlayerUUID() string {
 	if m != nil {
@@ -177,7 +244,7 @@ type FetchPlayerProfileResponse struct {
 func (m *FetchPlayerProfileResponse) Reset()                    { *m = FetchPlayerProfileResponse{} }
 func (m *FetchPlayerProfileResponse) String() string            { return proto.CompactTextString(m) }
 func (*FetchPlayerProfileResponse) ProtoMessage()               {}
-func (*FetchPlayerProfileResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+func (*FetchPlayerProfileResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
 func (m *FetchPlayerProfileResponse) GetSettings() map[string]bool {
 	if m != nil {
@@ -186,15 +253,100 @@ func (m *FetchPlayerProfileResponse) GetSettings() map[string]bool {
 	return nil
 }
 
+type SetPlayerSettingsRequest struct {
+	PlayerUUID string `protobuf:"bytes,1,opt,name=playerUUID" json:"playerUUID,omitempty"`
+	Key        string `protobuf:"bytes,2,opt,name=key" json:"key,omitempty"`
+	Value      bool   `protobuf:"varint,3,opt,name=value" json:"value,omitempty"`
+}
+
+func (m *SetPlayerSettingsRequest) Reset()                    { *m = SetPlayerSettingsRequest{} }
+func (m *SetPlayerSettingsRequest) String() string            { return proto.CompactTextString(m) }
+func (*SetPlayerSettingsRequest) ProtoMessage()               {}
+func (*SetPlayerSettingsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+
+func (m *SetPlayerSettingsRequest) GetPlayerUUID() string {
+	if m != nil {
+		return m.PlayerUUID
+	}
+	return ""
+}
+
+func (m *SetPlayerSettingsRequest) GetKey() string {
+	if m != nil {
+		return m.Key
+	}
+	return ""
+}
+
+func (m *SetPlayerSettingsRequest) GetValue() bool {
+	if m != nil {
+		return m.Value
+	}
+	return false
+}
+
+type SetPlayerServerRequest struct {
+	PlayerUUID string `protobuf:"bytes,1,opt,name=playerUUID" json:"playerUUID,omitempty"`
+	ServerName string `protobuf:"bytes,2,opt,name=serverName" json:"serverName,omitempty"`
+}
+
+func (m *SetPlayerServerRequest) Reset()                    { *m = SetPlayerServerRequest{} }
+func (m *SetPlayerServerRequest) String() string            { return proto.CompactTextString(m) }
+func (*SetPlayerServerRequest) ProtoMessage()               {}
+func (*SetPlayerServerRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+
+func (m *SetPlayerServerRequest) GetPlayerUUID() string {
+	if m != nil {
+		return m.PlayerUUID
+	}
+	return ""
+}
+
+func (m *SetPlayerServerRequest) GetServerName() string {
+	if m != nil {
+		return m.ServerName
+	}
+	return ""
+}
+
+type RemovePlayerServerRequest struct {
+	PlayerUUID string `protobuf:"bytes,1,opt,name=playerUUID" json:"playerUUID,omitempty"`
+	ServerName string `protobuf:"bytes,2,opt,name=serverName" json:"serverName,omitempty"`
+}
+
+func (m *RemovePlayerServerRequest) Reset()                    { *m = RemovePlayerServerRequest{} }
+func (m *RemovePlayerServerRequest) String() string            { return proto.CompactTextString(m) }
+func (*RemovePlayerServerRequest) ProtoMessage()               {}
+func (*RemovePlayerServerRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+
+func (m *RemovePlayerServerRequest) GetPlayerUUID() string {
+	if m != nil {
+		return m.PlayerUUID
+	}
+	return ""
+}
+
+func (m *RemovePlayerServerRequest) GetServerName() string {
+	if m != nil {
+		return m.ServerName
+	}
+	return ""
+}
+
 func init() {
+	proto.RegisterType((*Empty)(nil), "apipb.Empty")
 	proto.RegisterType((*StreamRequest)(nil), "apipb.StreamRequest")
 	proto.RegisterType((*ActionStreamResponse)(nil), "apipb.ActionStreamResponse")
 	proto.RegisterType((*AnnounceRequest)(nil), "apipb.AnnounceRequest")
-	proto.RegisterType((*Empty)(nil), "apipb.Empty")
+	proto.RegisterType((*QuitStreamRequest)(nil), "apipb.QuitStreamRequest")
 	proto.RegisterType((*InitPlayerProfileRequest)(nil), "apipb.InitPlayerProfileRequest")
 	proto.RegisterType((*InitPlayerProfileResponse)(nil), "apipb.InitPlayerProfileResponse")
 	proto.RegisterType((*FetchPlayerProfileRequest)(nil), "apipb.FetchPlayerProfileRequest")
 	proto.RegisterType((*FetchPlayerProfileResponse)(nil), "apipb.FetchPlayerProfileResponse")
+	proto.RegisterType((*SetPlayerSettingsRequest)(nil), "apipb.SetPlayerSettingsRequest")
+	proto.RegisterType((*SetPlayerServerRequest)(nil), "apipb.SetPlayerServerRequest")
+	proto.RegisterType((*RemovePlayerServerRequest)(nil), "apipb.RemovePlayerServerRequest")
+	proto.RegisterEnum("apipb.StreamType", StreamType_name, StreamType_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -210,8 +362,12 @@ const _ = grpc.SupportPackageIsVersion4
 type SysteraClient interface {
 	ActionStream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (Systera_ActionStreamClient, error)
 	Announce(ctx context.Context, in *AnnounceRequest, opts ...grpc.CallOption) (*Empty, error)
+	QuitStream(ctx context.Context, in *QuitStreamRequest, opts ...grpc.CallOption) (*Empty, error)
 	InitPlayerProfile(ctx context.Context, in *InitPlayerProfileRequest, opts ...grpc.CallOption) (*InitPlayerProfileResponse, error)
 	FetchPlayerProfile(ctx context.Context, in *FetchPlayerProfileRequest, opts ...grpc.CallOption) (*FetchPlayerProfileResponse, error)
+	SetPlayerSettings(ctx context.Context, in *SetPlayerSettingsRequest, opts ...grpc.CallOption) (*Empty, error)
+	SetPlayerServer(ctx context.Context, in *SetPlayerServerRequest, opts ...grpc.CallOption) (*Empty, error)
+	RemovePlayerServer(ctx context.Context, in *RemovePlayerServerRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type systeraClient struct {
@@ -263,6 +419,15 @@ func (c *systeraClient) Announce(ctx context.Context, in *AnnounceRequest, opts 
 	return out, nil
 }
 
+func (c *systeraClient) QuitStream(ctx context.Context, in *QuitStreamRequest, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/apipb.Systera/QuitStream", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *systeraClient) InitPlayerProfile(ctx context.Context, in *InitPlayerProfileRequest, opts ...grpc.CallOption) (*InitPlayerProfileResponse, error) {
 	out := new(InitPlayerProfileResponse)
 	err := grpc.Invoke(ctx, "/apipb.Systera/InitPlayerProfile", in, out, c.cc, opts...)
@@ -281,13 +446,44 @@ func (c *systeraClient) FetchPlayerProfile(ctx context.Context, in *FetchPlayerP
 	return out, nil
 }
 
+func (c *systeraClient) SetPlayerSettings(ctx context.Context, in *SetPlayerSettingsRequest, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/apipb.Systera/SetPlayerSettings", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systeraClient) SetPlayerServer(ctx context.Context, in *SetPlayerServerRequest, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/apipb.Systera/SetPlayerServer", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systeraClient) RemovePlayerServer(ctx context.Context, in *RemovePlayerServerRequest, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/apipb.Systera/RemovePlayerServer", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Systera service
 
 type SysteraServer interface {
 	ActionStream(*StreamRequest, Systera_ActionStreamServer) error
 	Announce(context.Context, *AnnounceRequest) (*Empty, error)
+	QuitStream(context.Context, *QuitStreamRequest) (*Empty, error)
 	InitPlayerProfile(context.Context, *InitPlayerProfileRequest) (*InitPlayerProfileResponse, error)
 	FetchPlayerProfile(context.Context, *FetchPlayerProfileRequest) (*FetchPlayerProfileResponse, error)
+	SetPlayerSettings(context.Context, *SetPlayerSettingsRequest) (*Empty, error)
+	SetPlayerServer(context.Context, *SetPlayerServerRequest) (*Empty, error)
+	RemovePlayerServer(context.Context, *RemovePlayerServerRequest) (*Empty, error)
 }
 
 func RegisterSysteraServer(s *grpc.Server, srv SysteraServer) {
@@ -333,6 +529,24 @@ func _Systera_Announce_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Systera_QuitStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuitStreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SysteraServer).QuitStream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apipb.Systera/QuitStream",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SysteraServer).QuitStream(ctx, req.(*QuitStreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Systera_InitPlayerProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InitPlayerProfileRequest)
 	if err := dec(in); err != nil {
@@ -369,6 +583,60 @@ func _Systera_FetchPlayerProfile_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Systera_SetPlayerSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPlayerSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SysteraServer).SetPlayerSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apipb.Systera/SetPlayerSettings",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SysteraServer).SetPlayerSettings(ctx, req.(*SetPlayerSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Systera_SetPlayerServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPlayerServerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SysteraServer).SetPlayerServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apipb.Systera/SetPlayerServer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SysteraServer).SetPlayerServer(ctx, req.(*SetPlayerServerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Systera_RemovePlayerServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemovePlayerServerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SysteraServer).RemovePlayerServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apipb.Systera/RemovePlayerServer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SysteraServer).RemovePlayerServer(ctx, req.(*RemovePlayerServerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Systera_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "apipb.Systera",
 	HandlerType: (*SysteraServer)(nil),
@@ -378,12 +646,28 @@ var _Systera_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Systera_Announce_Handler,
 		},
 		{
+			MethodName: "QuitStream",
+			Handler:    _Systera_QuitStream_Handler,
+		},
+		{
 			MethodName: "InitPlayerProfile",
 			Handler:    _Systera_InitPlayerProfile_Handler,
 		},
 		{
 			MethodName: "FetchPlayerProfile",
 			Handler:    _Systera_FetchPlayerProfile_Handler,
+		},
+		{
+			MethodName: "SetPlayerSettings",
+			Handler:    _Systera_SetPlayerSettings_Handler,
+		},
+		{
+			MethodName: "SetPlayerServer",
+			Handler:    _Systera_SetPlayerServer_Handler,
+		},
+		{
+			MethodName: "RemovePlayerServer",
+			Handler:    _Systera_RemovePlayerServer_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -399,33 +683,44 @@ var _Systera_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("systera.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 442 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x9c, 0x53, 0x5d, 0x8b, 0xd3, 0x40,
-	0x14, 0x6d, 0x52, 0x6b, 0xe3, 0xb5, 0xa1, 0x3a, 0x14, 0x49, 0x23, 0xd4, 0x38, 0xbe, 0x14, 0x85,
-	0x28, 0xf5, 0x45, 0xac, 0x2f, 0x2d, 0x56, 0x28, 0x82, 0x84, 0x94, 0x82, 0xe0, 0xd3, 0x34, 0x1d,
-	0x9b, 0x60, 0x33, 0x89, 0x99, 0xe9, 0x42, 0xde, 0xf7, 0xb7, 0xec, 0x9f, 0xd8, 0x3f, 0xb7, 0x4c,
-	0x32, 0xe9, 0xa6, 0xdb, 0x76, 0x17, 0xf6, 0xed, 0xce, 0x99, 0x73, 0x66, 0xee, 0xc7, 0xb9, 0x60,
-	0xf2, 0x9c, 0x0b, 0x9a, 0x11, 0x37, 0xcd, 0x12, 0x91, 0xa0, 0x16, 0x49, 0xa3, 0x74, 0x85, 0xdf,
-	0x81, 0xb9, 0x10, 0x19, 0x25, 0xb1, 0x4f, 0xff, 0xef, 0x28, 0x17, 0x08, 0xc1, 0x13, 0x46, 0x62,
-	0x6a, 0x69, 0x8e, 0x36, 0x7c, 0xe6, 0x17, 0x31, 0xfe, 0x06, 0xbd, 0x49, 0x20, 0xa2, 0x84, 0x55,
-	0x54, 0x9e, 0x26, 0x8c, 0x53, 0xc9, 0x15, 0x79, 0xba, 0xe7, 0xca, 0x18, 0xbd, 0x80, 0x66, 0x10,
-	0xaf, 0x2d, 0xbd, 0x80, 0x64, 0x88, 0x3f, 0x40, 0x77, 0xc2, 0x58, 0xb2, 0x63, 0x01, 0xad, 0x3e,
-	0xb1, 0xa0, 0x1d, 0x53, 0xce, 0xc9, 0xa6, 0xd2, 0x56, 0x47, 0xdc, 0x86, 0xd6, 0x2c, 0x4e, 0x45,
-	0x8e, 0x2f, 0x35, 0xb0, 0xe6, 0x2c, 0x12, 0xde, 0x96, 0xe4, 0x34, 0xf3, 0xb2, 0xe4, 0x6f, 0xb4,
-	0xdd, 0xeb, 0x07, 0x00, 0x69, 0x81, 0x2f, 0x97, 0xf3, 0xef, 0xea, 0x89, 0x1a, 0x72, 0x7b, 0xff,
-	0x4b, 0x96, 0xa2, 0xd7, 0xef, 0x25, 0x82, 0x86, 0xd0, 0x2d, 0x4f, 0x73, 0x6f, 0xb2, 0x5e, 0x67,
-	0x94, 0x73, 0xab, 0x59, 0x90, 0xee, 0xc2, 0x78, 0x0c, 0xfd, 0x13, 0x59, 0xa8, 0xfa, 0x07, 0x00,
-	0x21, 0xe1, 0x0a, 0x2d, 0xd2, 0x30, 0xfc, 0x1a, 0x22, 0xc5, 0x3f, 0xa8, 0x08, 0xc2, 0xc7, 0xd4,
-	0x80, 0xaf, 0x34, 0xb0, 0x4f, 0xa9, 0xd5, 0xdf, 0x3f, 0xc1, 0xe0, 0x54, 0x88, 0x88, 0x6d, 0xb8,
-	0xa5, 0x39, 0xcd, 0xe1, 0xf3, 0xd1, 0x47, 0xb7, 0x18, 0xa9, 0x7b, 0x5e, 0xe4, 0x2e, 0x94, 0x62,
-	0xc6, 0x44, 0x96, 0xfb, 0xfb, 0x07, 0xec, 0x31, 0x98, 0x07, 0x57, 0x72, 0x8a, 0xff, 0x68, 0xae,
-	0xb2, 0x92, 0x21, 0xea, 0x41, 0xeb, 0x82, 0x6c, 0x77, 0x65, 0x37, 0x0d, 0xbf, 0x3c, 0x7c, 0xd5,
-	0xbf, 0x68, 0xa3, 0x6b, 0x1d, 0xda, 0x8b, 0xd2, 0x5b, 0x68, 0x06, 0x9d, 0xba, 0x53, 0x50, 0x4f,
-	0xe5, 0x74, 0xe0, 0x31, 0xfb, 0xb5, 0x42, 0x4f, 0x99, 0x0a, 0x37, 0x3e, 0x69, 0x68, 0x04, 0x46,
-	0x65, 0x19, 0xf4, 0xaa, 0x22, 0x1f, 0x7a, 0xc8, 0xee, 0x28, 0xbc, 0xb4, 0x4b, 0x03, 0xfd, 0x86,
-	0x97, 0x47, 0x93, 0x42, 0x6f, 0x14, 0xe9, 0x9c, 0x93, 0x6c, 0xe7, 0x3c, 0xa1, 0xca, 0x07, 0xfd,
-	0x01, 0x74, 0xdc, 0x53, 0xe4, 0xdc, 0xd3, 0xee, 0xf2, 0xed, 0xb7, 0x0f, 0x0e, 0x04, 0x37, 0xa6,
-	0xef, 0xa1, 0xcf, 0xa8, 0x70, 0x79, 0xce, 0x82, 0x50, 0x84, 0x11, 0x91, 0x1a, 0x57, 0xad, 0xea,
-	0xd4, 0x54, 0x7d, 0xf5, 0xe4, 0xca, 0xf2, 0xd5, 0xd3, 0x62, 0x75, 0x3f, 0xdf, 0x04, 0x00, 0x00,
-	0xff, 0xff, 0x14, 0x45, 0x22, 0x97, 0xcb, 0x03, 0x00, 0x00,
+	// 614 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xb4, 0x55, 0x5d, 0x8f, 0xd2, 0x40,
+	0x14, 0xa5, 0xc0, 0xee, 0x76, 0xaf, 0x8b, 0xbb, 0xdc, 0x10, 0x52, 0x30, 0xae, 0x38, 0xd1, 0x48,
+	0xf6, 0xa1, 0x1a, 0x4c, 0x8c, 0x71, 0x13, 0x13, 0x58, 0x30, 0xa2, 0x89, 0x61, 0x0b, 0x24, 0x9b,
+	0xec, 0x53, 0x81, 0x11, 0x1a, 0xe9, 0x87, 0x9d, 0x81, 0xa4, 0xef, 0xfe, 0x16, 0xff, 0x85, 0xff,
+	0xcd, 0xb4, 0x9d, 0xd2, 0x96, 0xc2, 0xae, 0x9a, 0xf8, 0xd6, 0xb9, 0x77, 0xce, 0xb9, 0xf7, 0xce,
+	0x9c, 0xd3, 0x81, 0x12, 0xf3, 0x18, 0xa7, 0xae, 0xae, 0x3a, 0xae, 0xcd, 0x6d, 0x3c, 0xd0, 0x1d,
+	0xc3, 0x99, 0x90, 0x23, 0x38, 0xe8, 0x99, 0x0e, 0xf7, 0xc8, 0x27, 0x28, 0x0d, 0xb9, 0x4b, 0x75,
+	0x53, 0xa3, 0xdf, 0x57, 0x94, 0x71, 0x44, 0x28, 0x5a, 0xba, 0x49, 0x15, 0xa9, 0x21, 0x35, 0x8f,
+	0xb5, 0xe0, 0x1b, 0x9f, 0x43, 0x91, 0x7b, 0x0e, 0x55, 0xf2, 0x0d, 0xa9, 0xf9, 0xb0, 0x55, 0x56,
+	0x03, 0x0e, 0x35, 0xc4, 0x8d, 0x3c, 0x87, 0x6a, 0x41, 0x9a, 0xcc, 0xa1, 0xd2, 0x9e, 0x72, 0xc3,
+	0xb6, 0x22, 0x46, 0xe6, 0xd8, 0x16, 0x8b, 0xe1, 0xd2, 0x9d, 0x70, 0xac, 0xc2, 0x21, 0xd7, 0xdd,
+	0x39, 0xe5, 0x41, 0x9d, 0x63, 0x4d, 0xac, 0xf0, 0x0c, 0x0a, 0x53, 0x73, 0xa6, 0x14, 0x82, 0xa0,
+	0xff, 0x49, 0xae, 0xe0, 0xb4, 0x6d, 0x59, 0xf6, 0xca, 0x9a, 0xd2, 0xa8, 0xed, 0x18, 0x2c, 0xa5,
+	0xc0, 0x0a, 0x1c, 0x99, 0x94, 0x31, 0x7d, 0x4e, 0x05, 0x6b, 0xb4, 0x24, 0x2f, 0xa0, 0x7c, 0xbd,
+	0x32, 0xf8, 0xbd, 0xd3, 0x93, 0x1f, 0x12, 0x28, 0x7d, 0xcb, 0xe0, 0x83, 0xa5, 0xee, 0x51, 0x77,
+	0xe0, 0xda, 0x5f, 0x8d, 0xe5, 0xa6, 0xee, 0x39, 0x80, 0x13, 0xc4, 0xc7, 0xe3, 0x7e, 0x57, 0xc0,
+	0x12, 0x91, 0x38, 0xff, 0xc5, 0xa7, 0xcd, 0x27, 0xf3, 0x7e, 0x04, 0x9b, 0x70, 0x1a, 0xae, 0xfa,
+	0x83, 0xf6, 0x6c, 0xe6, 0x52, 0xc6, 0xc4, 0xa0, 0xdb, 0x61, 0x72, 0x09, 0xb5, 0x1d, 0x5d, 0x88,
+	0x23, 0x3e, 0x07, 0x58, 0xe8, 0x4c, 0x44, 0x83, 0x36, 0x64, 0x2d, 0x11, 0xf1, 0xc1, 0x1f, 0x28,
+	0x9f, 0x2e, 0xfe, 0x65, 0x06, 0xf2, 0x53, 0x82, 0xfa, 0x2e, 0xb4, 0xa8, 0xfd, 0x19, 0x64, 0x46,
+	0x39, 0x37, 0xac, 0x39, 0x53, 0xa4, 0x46, 0xa1, 0xf9, 0xa0, 0xf5, 0x52, 0x5c, 0xf1, 0x7e, 0x90,
+	0x3a, 0x14, 0x88, 0x9e, 0xc5, 0x5d, 0x4f, 0xdb, 0x10, 0xd4, 0x2f, 0xa1, 0x94, 0x4a, 0xf9, 0xb7,
+	0xff, 0x8d, 0x7a, 0xa2, 0x2b, 0xff, 0x13, 0x2b, 0x70, 0xb0, 0xd6, 0x97, 0xab, 0xf0, 0x34, 0x65,
+	0x2d, 0x5c, 0xbc, 0xcb, 0xbf, 0x95, 0xc8, 0x04, 0x94, 0x21, 0x15, 0x27, 0x14, 0xb1, 0xfc, 0xe9,
+	0x45, 0x89, 0x3a, 0xf9, 0x1d, 0x75, 0x0a, 0x89, 0x3a, 0xe4, 0x06, 0xaa, 0x89, 0x1a, 0xee, 0x9a,
+	0xba, 0x7f, 0x21, 0x05, 0x16, 0x00, 0x92, 0x52, 0x88, 0x23, 0xe4, 0x16, 0x6a, 0x1a, 0x35, 0xed,
+	0x35, 0xfd, 0x0f, 0xe4, 0x17, 0xcf, 0x00, 0x62, 0xc3, 0xa1, 0x0c, 0xc5, 0xeb, 0x71, 0x7f, 0x74,
+	0x96, 0xc3, 0x13, 0x90, 0xbb, 0xfd, 0xe1, 0xa0, 0x3d, 0xba, 0xfa, 0x78, 0x26, 0xb5, 0x7e, 0x15,
+	0xe1, 0x68, 0x18, 0xfe, 0x2f, 0xb0, 0x07, 0x27, 0x49, 0x37, 0x63, 0x25, 0xe5, 0x5b, 0xd1, 0x57,
+	0xfd, 0x91, 0x88, 0xee, 0x32, 0x3e, 0xc9, 0xbd, 0x92, 0xb0, 0x05, 0x72, 0xe4, 0x55, 0xac, 0x46,
+	0x9b, 0xd3, 0xe6, 0xad, 0x9f, 0x88, 0x78, 0xf8, 0x4b, 0xca, 0xe1, 0x1b, 0x80, 0xd8, 0x9a, 0xa8,
+	0x88, 0x6c, 0xc6, 0xad, 0x19, 0xdc, 0x0d, 0x94, 0x33, 0x16, 0xc1, 0x27, 0x62, 0xd3, 0x3e, 0x0b,
+	0xd7, 0x1b, 0xfb, 0x37, 0x44, 0x73, 0xe0, 0x2d, 0x60, 0x56, 0xcc, 0xd8, 0xb8, 0x43, 0xe7, 0x21,
+	0xf7, 0xd3, 0x7b, 0x9d, 0x40, 0x72, 0xd8, 0x81, 0x72, 0x46, 0xb6, 0x9b, 0xb6, 0xf7, 0x09, 0x3a,
+	0x3d, 0x3c, 0xbe, 0x87, 0xd3, 0x2d, 0x59, 0xe2, 0xe3, 0x2c, 0x43, 0x42, 0x51, 0x5b, 0xf8, 0x2e,
+	0x60, 0x56, 0x7c, 0x9b, 0x01, 0xf7, 0xea, 0x32, 0xcd, 0xd2, 0xb9, 0x80, 0x9a, 0x45, 0xb9, 0xca,
+	0x3c, 0x6b, 0xba, 0xe0, 0x0b, 0x43, 0xf7, 0x93, 0xaa, 0x78, 0x80, 0x3a, 0x25, 0xa1, 0xac, 0x81,
+	0xff, 0x10, 0xb1, 0xc9, 0x61, 0xf0, 0x20, 0xbd, 0xfe, 0x1d, 0x00, 0x00, 0xff, 0xff, 0xed, 0x8a,
+	0x4a, 0x9c, 0xa1, 0x06, 0x00, 0x00,
 }
