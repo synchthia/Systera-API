@@ -17,10 +17,12 @@ type Server interface {
 	QuitStream(name string)
 
 	InitPlayerProfile(playerUUID, playerName, ipAddress string) (bool, error)
-	FetchPlayerProfile(playerUUID string) (map[string]bool, error)
+	FetchPlayerProfile(playerUUID string) (string, map[string]bool, error)
 
 	SetPlayerServer(playerUUID, serverName string) error
 	SetPlayerSettings(playerUUID, key string, value bool) error
+
+	FetchGroups(serverName string) []string
 }
 
 type grpcServer struct {
@@ -103,7 +105,7 @@ func (s *grpcServer) InitPlayerProfile(ctx context.Context, e *pb.InitPlayerProf
 
 func (s *grpcServer) FetchPlayerProfile(ctx context.Context, e *pb.FetchPlayerProfileRequest) (*pb.FetchPlayerProfileResponse, error) {
 	playerData, err := database.Find(e.PlayerUUID)
-	return &pb.FetchPlayerProfileResponse{Settings: playerData.Settings}, err
+	return &pb.FetchPlayerProfileResponse{Groups: playerData.Groups, Settings: playerData.Settings}, err
 }
 
 func (s *grpcServer) SetPlayerServer(ctx context.Context, e *pb.SetPlayerServerRequest) (*pb.Empty, error) {
@@ -124,4 +126,18 @@ func (s *grpcServer) RemovePlayerServer(ctx context.Context, e *pb.RemovePlayerS
 func (s *grpcServer) SetPlayerSettings(ctx context.Context, e *pb.SetPlayerSettingsRequest) (*pb.Empty, error) {
 	err := database.PushPlayerSettings(e.PlayerUUID, e.Key, e.Value)
 	return &pb.Empty{}, err
+}
+
+func (s *grpcServer) FetchGroups(ctx context.Context, e *pb.FetchGroupsRequest) (*pb.FetchGroupsResponse, error) {
+	groups, err := database.FindGroupData()
+	var allGroups []*pb.GroupEntry
+	for _, value := range groups {
+		allGroups = append(allGroups, &pb.GroupEntry{
+			GroupName:   value.Name,
+			GroupPrefix: value.Prefix,
+			GlobalPerms: value.Permissions["GLOBAL"],
+			ServerPerms: value.Permissions[e.ServerName],
+		})
+	}
+	return &pb.FetchGroupsResponse{Groups: allGroups}, err
 }

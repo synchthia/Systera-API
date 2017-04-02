@@ -17,6 +17,8 @@ service Systera {
   rpc InitPlayerProfile (InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
   rpc FetchPlayerProfile (FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
 
+  rpc FetchGroups (FetchGroupsRequest) returns (FetchGroupsResponse) {}
+
   rpc SetPlayerServer (SetPlayerServerRequest) returns (Empty);
   rpc RemovePlayerServer (RemovePlayerServerRequest) returns (Empty);
   rpc SetPlayerSettings (SetPlayerSettingsRequest) returns (Empty);
@@ -40,10 +42,23 @@ message InitPlayerProfileResponse { bool hasProfile = 1; }
 
 message FetchPlayerProfileRequest { string playerUUID = 1; }
 message FetchPlayerProfileResponse {
-  map<string, bool> settings = 1;
+  repeated string groups = 1;
+  map<string, bool> settings = 2;
 }
 
 message SetPlayerServerRequest { string playerUUID = 1; string serverName = 2; }
 message RemovePlayerServerRequest { string playerUUID = 1; string serverName = 2; }
 
 message SetPlayerSettingsRequest { string playerUUID = 1; string key = 2; bool value = 3; }
+
+/*
+ * GROUP PERMISISONS
+ */
+message GroupEntry {
+  string groupName = 1;
+  string groupPrefix = 2;
+  repeated string globalPerms = 3;
+  repeated string serverPerms = 4;
+}
+message FetchGroupsRequest { string serverName = 1; }
+message FetchGroupsResponse { repeated GroupEntry groups = 1; }
