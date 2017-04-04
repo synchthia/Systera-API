@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/Startail/Systera-API/util"
 	"gopkg.in/mgo.v2/bson"
+	"gitlab.com/Startail/Systera-API/util"
 )
 
 type PlayerData struct {
@@ -48,7 +48,7 @@ func UUIDToName(uuid string) string {
 	return playerData.Name
 }
 
-func NameToUUID(name string) string {
+func NameToUUID(name string) (string, error) {
 	session := GetMongoSession().Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
@@ -56,17 +56,35 @@ func NameToUUID(name string) string {
 	playerData := PlayerData{}
 	err := coll.Find(bson.M{"name": name}).One(&playerData)
 	if err != nil {
-		util.GetFromJSONAPI("https://api.mojang.com/users/profiles/minecraft/"+name, &playerData)
+		uuid, err := NameToUUIDwithMojang(name)
+		return uuid, err
 	}
 
-	return playerData.UUID
+	return playerData.UUID, nil
 }
 
-func CheckHasProfile(uuid string) (bool, error) {
+func NameToUUIDwithMojang(name string) (string, error) {
+	playerData := PlayerData{}
+	err := util.GetFromJSONAPI("https://api.mojang.com/users/profiles/minecraft/"+name, &playerData)
+	if err != nil {
+		return "", err
+	}
+
+	return playerData.UUID, nil
+}
+
+func CheckHasProfile(uuidOrName string) (bool, error) {
 	session := GetMongoSession().Copy()
 	defer session.Close()
+	coll := session.DB("systera").C("players")
 
-	count, err := session.DB("systera").C("players").Find(bson.M{"uuid": uuid}).Count()
+	key := "uuid"
+	uuidOrName = strings.ToLower(uuidOrName)
+	if len(uuidOrName) != 32 {
+		key = "name_lower"
+	}
+
+	count, err := coll.Find(bson.M{key: uuidOrName}).Sort("-stats.last_login").Count()
 	if err != nil {
 		log.Printf("[!!!]: Error occurred during CheckHasProfile: %s", err.Error())
 		return false, err

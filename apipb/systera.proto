@@ -5,31 +5,39 @@ option java_package = "net.synchthia.api.systera";
 option java_outer_classname = "SysteraProtos";
 
 message Empty {}
+message PlayerData { string UUID = 1; string name = 2; }
 
 /*
  * Systera API
  */
 service Systera {
+  rpc Ping(Empty) returns (Empty) {}
   rpc ActionStream (StreamRequest) returns (stream ActionStreamResponse) {}
+  rpc PunishStream (StreamRequest) returns (stream PunishStreamResponse) {}
   rpc Announce(AnnounceRequest) returns (Empty) {}
   rpc QuitStream(QuitStreamRequest) returns (Empty) {}
 
   rpc InitPlayerProfile (InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
   rpc FetchPlayerProfile (FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
-
-  rpc FetchGroups (FetchGroupsRequest) returns (FetchGroupsResponse) {}
+  rpc FetchPlayerProfileByName (FetchPlayerProfileByNameRequest) returns (FetchPlayerProfileResponse) {}
 
   rpc SetPlayerServer (SetPlayerServerRequest) returns (Empty);
   rpc RemovePlayerServer (RemovePlayerServerRequest) returns (Empty);
   rpc SetPlayerSettings (SetPlayerSettingsRequest) returns (Empty);
+
+  rpc GetPlayerPunish (GetPlayerPunishRequest) returns (GetPlayerPunishResponse) {}
+  rpc SetPlayerPunish (SetPlayerPunishRequest) returns (SetPlayerPunishResponse) {}
+
+  rpc FetchGroups (FetchGroupsRequest) returns (FetchGroupsResponse) {}
 }
 
 /*
  * Stream API
  */
-enum StreamType { QUIT = 0; DISPATCH = 1; }
+enum StreamType { QUIT = 0; RESTORED = 1; DISPATCH = 2; }
 message StreamRequest { string name = 1; StreamType type = 2; }
 message ActionStreamResponse { StreamType type = 1; string target = 2; string cmd = 3; }
+message PunishStreamResponse { StreamType type = 1; string target = 2; PunishEntry entry = 3; }
 
 message AnnounceRequest { string target = 1; string message = 2; }
 message QuitStreamRequest { string name = 1; }
@@ -41,15 +49,46 @@ message InitPlayerProfileRequest { string playerUUID = 1; string playerName = 2;
 message InitPlayerProfileResponse { bool hasProfile = 1; }
 
 message FetchPlayerProfileRequest { string playerUUID = 1; }
+message FetchPlayerProfileByNameRequest { string playerName = 1; }
 message FetchPlayerProfileResponse {
-  repeated string groups = 1;
-  map<string, bool> settings = 2;
+  string playerUUID = 1;
+  string playerName = 2;
+  repeated string groups = 3;
+  map<string, bool> settings = 4;
 }
 
 message SetPlayerServerRequest { string playerUUID = 1; string serverName = 2; }
 message RemovePlayerServerRequest { string playerUUID = 1; string serverName = 2; }
 
 message SetPlayerSettingsRequest { string playerUUID = 1; string key = 2; bool value = 3; }
+
+/*
+ * PLAYER PUNISHMENTS
+ */
+enum PunishLevel { WARN = 0; KICK = 1; TBAN = 2; PBAN = 3; }
+
+message PunishEntry {
+  bool available = 1;
+
+  PunishLevel level = 2;
+  string reason = 3;
+
+  int64 date = 4;
+  int64 expire = 5;
+
+  PlayerData punishedFrom = 6;
+  PlayerData punishedTo = 7;
+}
+
+message GetPlayerPunishRequest { string playerUUID = 1; PunishLevel filterLevel = 2; bool includeExpired = 3; }
+message GetPlayerPunishResponse { repeated PunishEntry entry = 1; }
+
+message SetPlayerPunishRequest {
+  bool remote = 1;
+  bool force = 2;
+  PunishEntry entry = 3;
+}
+message SetPlayerPunishResponse { bool noprofile = 1; bool offline = 2; bool duplicate = 3; bool cooldown = 4; }
 
 /*
  * GROUP PERMISISONS

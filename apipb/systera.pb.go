@@ -10,17 +10,25 @@ It is generated from these files:
 
 It has these top-level messages:
 	Empty
+	PlayerData
 	StreamRequest
 	ActionStreamResponse
+	PunishStreamResponse
 	AnnounceRequest
 	QuitStreamRequest
 	InitPlayerProfileRequest
 	InitPlayerProfileResponse
 	FetchPlayerProfileRequest
+	FetchPlayerProfileByNameRequest
 	FetchPlayerProfileResponse
 	SetPlayerServerRequest
 	RemovePlayerServerRequest
 	SetPlayerSettingsRequest
+	PunishEntry
+	GetPlayerPunishRequest
+	GetPlayerPunishResponse
+	SetPlayerPunishRequest
+	SetPlayerPunishResponse
 	GroupEntry
 	FetchGroupsRequest
 	FetchGroupsResponse
@@ -53,22 +61,54 @@ type StreamType int32
 
 const (
 	StreamType_QUIT     StreamType = 0
-	StreamType_DISPATCH StreamType = 1
+	StreamType_RESTORED StreamType = 1
+	StreamType_DISPATCH StreamType = 2
 )
 
 var StreamType_name = map[int32]string{
 	0: "QUIT",
-	1: "DISPATCH",
+	1: "RESTORED",
+	2: "DISPATCH",
 }
 var StreamType_value = map[string]int32{
 	"QUIT":     0,
-	"DISPATCH": 1,
+	"RESTORED": 1,
+	"DISPATCH": 2,
 }
 
 func (x StreamType) String() string {
 	return proto.EnumName(StreamType_name, int32(x))
 }
 func (StreamType) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+//
+// PLAYER PUNISHMENTS
+type PunishLevel int32
+
+const (
+	PunishLevel_WARN PunishLevel = 0
+	PunishLevel_KICK PunishLevel = 1
+	PunishLevel_TBAN PunishLevel = 2
+	PunishLevel_PBAN PunishLevel = 3
+)
+
+var PunishLevel_name = map[int32]string{
+	0: "WARN",
+	1: "KICK",
+	2: "TBAN",
+	3: "PBAN",
+}
+var PunishLevel_value = map[string]int32{
+	"WARN": 0,
+	"KICK": 1,
+	"TBAN": 2,
+	"PBAN": 3,
+}
+
+func (x PunishLevel) String() string {
+	return proto.EnumName(PunishLevel_name, int32(x))
+}
+func (PunishLevel) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
 type Empty struct {
 }
@@ -78,6 +118,30 @@ func (m *Empty) String() string            { return proto.CompactTextString(m) }
 func (*Empty) ProtoMessage()               {}
 func (*Empty) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
+type PlayerData struct {
+	UUID string `protobuf:"bytes,1,opt,name=UUID,json=uUID" json:"UUID,omitempty"`
+	Name string `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
+}
+
+func (m *PlayerData) Reset()                    { *m = PlayerData{} }
+func (m *PlayerData) String() string            { return proto.CompactTextString(m) }
+func (*PlayerData) ProtoMessage()               {}
+func (*PlayerData) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *PlayerData) GetUUID() string {
+	if m != nil {
+		return m.UUID
+	}
+	return ""
+}
+
+func (m *PlayerData) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
 type StreamRequest struct {
 	Name string     `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 	Type StreamType `protobuf:"varint,2,opt,name=type,enum=apipb.StreamType" json:"type,omitempty"`
@@ -86,7 +150,7 @@ type StreamRequest struct {
 func (m *StreamRequest) Reset()                    { *m = StreamRequest{} }
 func (m *StreamRequest) String() string            { return proto.CompactTextString(m) }
 func (*StreamRequest) ProtoMessage()               {}
-func (*StreamRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*StreamRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
 func (m *StreamRequest) GetName() string {
 	if m != nil {
@@ -111,7 +175,7 @@ type ActionStreamResponse struct {
 func (m *ActionStreamResponse) Reset()                    { *m = ActionStreamResponse{} }
 func (m *ActionStreamResponse) String() string            { return proto.CompactTextString(m) }
 func (*ActionStreamResponse) ProtoMessage()               {}
-func (*ActionStreamResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*ActionStreamResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
 func (m *ActionStreamResponse) GetType() StreamType {
 	if m != nil {
@@ -134,6 +198,38 @@ func (m *ActionStreamResponse) GetCmd() string {
 	return ""
 }
 
+type PunishStreamResponse struct {
+	Type   StreamType   `protobuf:"varint,1,opt,name=type,enum=apipb.StreamType" json:"type,omitempty"`
+	Target string       `protobuf:"bytes,2,opt,name=target" json:"target,omitempty"`
+	Entry  *PunishEntry `protobuf:"bytes,3,opt,name=entry" json:"entry,omitempty"`
+}
+
+func (m *PunishStreamResponse) Reset()                    { *m = PunishStreamResponse{} }
+func (m *PunishStreamResponse) String() string            { return proto.CompactTextString(m) }
+func (*PunishStreamResponse) ProtoMessage()               {}
+func (*PunishStreamResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+func (m *PunishStreamResponse) GetType() StreamType {
+	if m != nil {
+		return m.Type
+	}
+	return StreamType_QUIT
+}
+
+func (m *PunishStreamResponse) GetTarget() string {
+	if m != nil {
+		return m.Target
+	}
+	return ""
+}
+
+func (m *PunishStreamResponse) GetEntry() *PunishEntry {
+	if m != nil {
+		return m.Entry
+	}
+	return nil
+}
+
 type AnnounceRequest struct {
 	Target  string `protobuf:"bytes,1,opt,name=target" json:"target,omitempty"`
 	Message string `protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
@@ -142,7 +238,7 @@ type AnnounceRequest struct {
 func (m *AnnounceRequest) Reset()                    { *m = AnnounceRequest{} }
 func (m *AnnounceRequest) String() string            { return proto.CompactTextString(m) }
 func (*AnnounceRequest) ProtoMessage()               {}
-func (*AnnounceRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (*AnnounceRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
 func (m *AnnounceRequest) GetTarget() string {
 	if m != nil {
@@ -165,7 +261,7 @@ type QuitStreamRequest struct {
 func (m *QuitStreamRequest) Reset()                    { *m = QuitStreamRequest{} }
 func (m *QuitStreamRequest) String() string            { return proto.CompactTextString(m) }
 func (*QuitStreamRequest) ProtoMessage()               {}
-func (*QuitStreamRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (*QuitStreamRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
 func (m *QuitStreamRequest) GetName() string {
 	if m != nil {
@@ -185,7 +281,7 @@ type InitPlayerProfileRequest struct {
 func (m *InitPlayerProfileRequest) Reset()                    { *m = InitPlayerProfileRequest{} }
 func (m *InitPlayerProfileRequest) String() string            { return proto.CompactTextString(m) }
 func (*InitPlayerProfileRequest) ProtoMessage()               {}
-func (*InitPlayerProfileRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (*InitPlayerProfileRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
 func (m *InitPlayerProfileRequest) GetPlayerUUID() string {
 	if m != nil {
@@ -215,7 +311,7 @@ type InitPlayerProfileResponse struct {
 func (m *InitPlayerProfileResponse) Reset()                    { *m = InitPlayerProfileResponse{} }
 func (m *InitPlayerProfileResponse) String() string            { return proto.CompactTextString(m) }
 func (*InitPlayerProfileResponse) ProtoMessage()               {}
-func (*InitPlayerProfileResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (*InitPlayerProfileResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
 func (m *InitPlayerProfileResponse) GetHasProfile() bool {
 	if m != nil {
@@ -231,7 +327,7 @@ type FetchPlayerProfileRequest struct {
 func (m *FetchPlayerProfileRequest) Reset()                    { *m = FetchPlayerProfileRequest{} }
 func (m *FetchPlayerProfileRequest) String() string            { return proto.CompactTextString(m) }
 func (*FetchPlayerProfileRequest) ProtoMessage()               {}
-func (*FetchPlayerProfileRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+func (*FetchPlayerProfileRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
 func (m *FetchPlayerProfileRequest) GetPlayerUUID() string {
 	if m != nil {
@@ -240,15 +336,49 @@ func (m *FetchPlayerProfileRequest) GetPlayerUUID() string {
 	return ""
 }
 
+type FetchPlayerProfileByNameRequest struct {
+	PlayerName string `protobuf:"bytes,1,opt,name=playerName" json:"playerName,omitempty"`
+}
+
+func (m *FetchPlayerProfileByNameRequest) Reset()         { *m = FetchPlayerProfileByNameRequest{} }
+func (m *FetchPlayerProfileByNameRequest) String() string { return proto.CompactTextString(m) }
+func (*FetchPlayerProfileByNameRequest) ProtoMessage()    {}
+func (*FetchPlayerProfileByNameRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{10}
+}
+
+func (m *FetchPlayerProfileByNameRequest) GetPlayerName() string {
+	if m != nil {
+		return m.PlayerName
+	}
+	return ""
+}
+
 type FetchPlayerProfileResponse struct {
-	Groups   []string        `protobuf:"bytes,1,rep,name=groups" json:"groups,omitempty"`
-	Settings map[string]bool `protobuf:"bytes,2,rep,name=settings" json:"settings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	PlayerUUID string          `protobuf:"bytes,1,opt,name=playerUUID" json:"playerUUID,omitempty"`
+	PlayerName string          `protobuf:"bytes,2,opt,name=playerName" json:"playerName,omitempty"`
+	Groups     []string        `protobuf:"bytes,3,rep,name=groups" json:"groups,omitempty"`
+	Settings   map[string]bool `protobuf:"bytes,4,rep,name=settings" json:"settings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 }
 
 func (m *FetchPlayerProfileResponse) Reset()                    { *m = FetchPlayerProfileResponse{} }
 func (m *FetchPlayerProfileResponse) String() string            { return proto.CompactTextString(m) }
 func (*FetchPlayerProfileResponse) ProtoMessage()               {}
-func (*FetchPlayerProfileResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+func (*FetchPlayerProfileResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+
+func (m *FetchPlayerProfileResponse) GetPlayerUUID() string {
+	if m != nil {
+		return m.PlayerUUID
+	}
+	return ""
+}
+
+func (m *FetchPlayerProfileResponse) GetPlayerName() string {
+	if m != nil {
+		return m.PlayerName
+	}
+	return ""
+}
 
 func (m *FetchPlayerProfileResponse) GetGroups() []string {
 	if m != nil {
@@ -272,7 +402,7 @@ type SetPlayerServerRequest struct {
 func (m *SetPlayerServerRequest) Reset()                    { *m = SetPlayerServerRequest{} }
 func (m *SetPlayerServerRequest) String() string            { return proto.CompactTextString(m) }
 func (*SetPlayerServerRequest) ProtoMessage()               {}
-func (*SetPlayerServerRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+func (*SetPlayerServerRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
 
 func (m *SetPlayerServerRequest) GetPlayerUUID() string {
 	if m != nil {
@@ -296,7 +426,7 @@ type RemovePlayerServerRequest struct {
 func (m *RemovePlayerServerRequest) Reset()                    { *m = RemovePlayerServerRequest{} }
 func (m *RemovePlayerServerRequest) String() string            { return proto.CompactTextString(m) }
 func (*RemovePlayerServerRequest) ProtoMessage()               {}
-func (*RemovePlayerServerRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+func (*RemovePlayerServerRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
 
 func (m *RemovePlayerServerRequest) GetPlayerUUID() string {
 	if m != nil {
@@ -321,7 +451,7 @@ type SetPlayerSettingsRequest struct {
 func (m *SetPlayerSettingsRequest) Reset()                    { *m = SetPlayerSettingsRequest{} }
 func (m *SetPlayerSettingsRequest) String() string            { return proto.CompactTextString(m) }
 func (*SetPlayerSettingsRequest) ProtoMessage()               {}
-func (*SetPlayerSettingsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+func (*SetPlayerSettingsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
 
 func (m *SetPlayerSettingsRequest) GetPlayerUUID() string {
 	if m != nil {
@@ -344,6 +474,190 @@ func (m *SetPlayerSettingsRequest) GetValue() bool {
 	return false
 }
 
+type PunishEntry struct {
+	Available    bool        `protobuf:"varint,1,opt,name=available" json:"available,omitempty"`
+	Level        PunishLevel `protobuf:"varint,2,opt,name=level,enum=apipb.PunishLevel" json:"level,omitempty"`
+	Reason       string      `protobuf:"bytes,3,opt,name=reason" json:"reason,omitempty"`
+	Date         int64       `protobuf:"varint,4,opt,name=date" json:"date,omitempty"`
+	Expire       int64       `protobuf:"varint,5,opt,name=expire" json:"expire,omitempty"`
+	PunishedFrom *PlayerData `protobuf:"bytes,6,opt,name=punishedFrom" json:"punishedFrom,omitempty"`
+	PunishedTo   *PlayerData `protobuf:"bytes,7,opt,name=punishedTo" json:"punishedTo,omitempty"`
+}
+
+func (m *PunishEntry) Reset()                    { *m = PunishEntry{} }
+func (m *PunishEntry) String() string            { return proto.CompactTextString(m) }
+func (*PunishEntry) ProtoMessage()               {}
+func (*PunishEntry) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{15} }
+
+func (m *PunishEntry) GetAvailable() bool {
+	if m != nil {
+		return m.Available
+	}
+	return false
+}
+
+func (m *PunishEntry) GetLevel() PunishLevel {
+	if m != nil {
+		return m.Level
+	}
+	return PunishLevel_WARN
+}
+
+func (m *PunishEntry) GetReason() string {
+	if m != nil {
+		return m.Reason
+	}
+	return ""
+}
+
+func (m *PunishEntry) GetDate() int64 {
+	if m != nil {
+		return m.Date
+	}
+	return 0
+}
+
+func (m *PunishEntry) GetExpire() int64 {
+	if m != nil {
+		return m.Expire
+	}
+	return 0
+}
+
+func (m *PunishEntry) GetPunishedFrom() *PlayerData {
+	if m != nil {
+		return m.PunishedFrom
+	}
+	return nil
+}
+
+func (m *PunishEntry) GetPunishedTo() *PlayerData {
+	if m != nil {
+		return m.PunishedTo
+	}
+	return nil
+}
+
+type GetPlayerPunishRequest struct {
+	PlayerUUID     string      `protobuf:"bytes,1,opt,name=playerUUID" json:"playerUUID,omitempty"`
+	FilterLevel    PunishLevel `protobuf:"varint,2,opt,name=filterLevel,enum=apipb.PunishLevel" json:"filterLevel,omitempty"`
+	IncludeExpired bool        `protobuf:"varint,3,opt,name=includeExpired" json:"includeExpired,omitempty"`
+}
+
+func (m *GetPlayerPunishRequest) Reset()                    { *m = GetPlayerPunishRequest{} }
+func (m *GetPlayerPunishRequest) String() string            { return proto.CompactTextString(m) }
+func (*GetPlayerPunishRequest) ProtoMessage()               {}
+func (*GetPlayerPunishRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{16} }
+
+func (m *GetPlayerPunishRequest) GetPlayerUUID() string {
+	if m != nil {
+		return m.PlayerUUID
+	}
+	return ""
+}
+
+func (m *GetPlayerPunishRequest) GetFilterLevel() PunishLevel {
+	if m != nil {
+		return m.FilterLevel
+	}
+	return PunishLevel_WARN
+}
+
+func (m *GetPlayerPunishRequest) GetIncludeExpired() bool {
+	if m != nil {
+		return m.IncludeExpired
+	}
+	return false
+}
+
+type GetPlayerPunishResponse struct {
+	Entry []*PunishEntry `protobuf:"bytes,1,rep,name=entry" json:"entry,omitempty"`
+}
+
+func (m *GetPlayerPunishResponse) Reset()                    { *m = GetPlayerPunishResponse{} }
+func (m *GetPlayerPunishResponse) String() string            { return proto.CompactTextString(m) }
+func (*GetPlayerPunishResponse) ProtoMessage()               {}
+func (*GetPlayerPunishResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{17} }
+
+func (m *GetPlayerPunishResponse) GetEntry() []*PunishEntry {
+	if m != nil {
+		return m.Entry
+	}
+	return nil
+}
+
+type SetPlayerPunishRequest struct {
+	Remote bool         `protobuf:"varint,1,opt,name=remote" json:"remote,omitempty"`
+	Force  bool         `protobuf:"varint,2,opt,name=force" json:"force,omitempty"`
+	Entry  *PunishEntry `protobuf:"bytes,3,opt,name=entry" json:"entry,omitempty"`
+}
+
+func (m *SetPlayerPunishRequest) Reset()                    { *m = SetPlayerPunishRequest{} }
+func (m *SetPlayerPunishRequest) String() string            { return proto.CompactTextString(m) }
+func (*SetPlayerPunishRequest) ProtoMessage()               {}
+func (*SetPlayerPunishRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{18} }
+
+func (m *SetPlayerPunishRequest) GetRemote() bool {
+	if m != nil {
+		return m.Remote
+	}
+	return false
+}
+
+func (m *SetPlayerPunishRequest) GetForce() bool {
+	if m != nil {
+		return m.Force
+	}
+	return false
+}
+
+func (m *SetPlayerPunishRequest) GetEntry() *PunishEntry {
+	if m != nil {
+		return m.Entry
+	}
+	return nil
+}
+
+type SetPlayerPunishResponse struct {
+	Noprofile bool `protobuf:"varint,1,opt,name=noprofile" json:"noprofile,omitempty"`
+	Offline   bool `protobuf:"varint,2,opt,name=offline" json:"offline,omitempty"`
+	Duplicate bool `protobuf:"varint,3,opt,name=duplicate" json:"duplicate,omitempty"`
+	Cooldown  bool `protobuf:"varint,4,opt,name=cooldown" json:"cooldown,omitempty"`
+}
+
+func (m *SetPlayerPunishResponse) Reset()                    { *m = SetPlayerPunishResponse{} }
+func (m *SetPlayerPunishResponse) String() string            { return proto.CompactTextString(m) }
+func (*SetPlayerPunishResponse) ProtoMessage()               {}
+func (*SetPlayerPunishResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{19} }
+
+func (m *SetPlayerPunishResponse) GetNoprofile() bool {
+	if m != nil {
+		return m.Noprofile
+	}
+	return false
+}
+
+func (m *SetPlayerPunishResponse) GetOffline() bool {
+	if m != nil {
+		return m.Offline
+	}
+	return false
+}
+
+func (m *SetPlayerPunishResponse) GetDuplicate() bool {
+	if m != nil {
+		return m.Duplicate
+	}
+	return false
+}
+
+func (m *SetPlayerPunishResponse) GetCooldown() bool {
+	if m != nil {
+		return m.Cooldown
+	}
+	return false
+}
+
 //
 // GROUP PERMISISONS
 type GroupEntry struct {
@@ -356,7 +670,7 @@ type GroupEntry struct {
 func (m *GroupEntry) Reset()                    { *m = GroupEntry{} }
 func (m *GroupEntry) String() string            { return proto.CompactTextString(m) }
 func (*GroupEntry) ProtoMessage()               {}
-func (*GroupEntry) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+func (*GroupEntry) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{20} }
 
 func (m *GroupEntry) GetGroupName() string {
 	if m != nil {
@@ -393,7 +707,7 @@ type FetchGroupsRequest struct {
 func (m *FetchGroupsRequest) Reset()                    { *m = FetchGroupsRequest{} }
 func (m *FetchGroupsRequest) String() string            { return proto.CompactTextString(m) }
 func (*FetchGroupsRequest) ProtoMessage()               {}
-func (*FetchGroupsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+func (*FetchGroupsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{21} }
 
 func (m *FetchGroupsRequest) GetServerName() string {
 	if m != nil {
@@ -409,7 +723,7 @@ type FetchGroupsResponse struct {
 func (m *FetchGroupsResponse) Reset()                    { *m = FetchGroupsResponse{} }
 func (m *FetchGroupsResponse) String() string            { return proto.CompactTextString(m) }
 func (*FetchGroupsResponse) ProtoMessage()               {}
-func (*FetchGroupsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
+func (*FetchGroupsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{22} }
 
 func (m *FetchGroupsResponse) GetGroups() []*GroupEntry {
 	if m != nil {
@@ -420,21 +734,30 @@ func (m *FetchGroupsResponse) GetGroups() []*GroupEntry {
 
 func init() {
 	proto.RegisterType((*Empty)(nil), "apipb.Empty")
+	proto.RegisterType((*PlayerData)(nil), "apipb.PlayerData")
 	proto.RegisterType((*StreamRequest)(nil), "apipb.StreamRequest")
 	proto.RegisterType((*ActionStreamResponse)(nil), "apipb.ActionStreamResponse")
+	proto.RegisterType((*PunishStreamResponse)(nil), "apipb.PunishStreamResponse")
 	proto.RegisterType((*AnnounceRequest)(nil), "apipb.AnnounceRequest")
 	proto.RegisterType((*QuitStreamRequest)(nil), "apipb.QuitStreamRequest")
 	proto.RegisterType((*InitPlayerProfileRequest)(nil), "apipb.InitPlayerProfileRequest")
 	proto.RegisterType((*InitPlayerProfileResponse)(nil), "apipb.InitPlayerProfileResponse")
 	proto.RegisterType((*FetchPlayerProfileRequest)(nil), "apipb.FetchPlayerProfileRequest")
+	proto.RegisterType((*FetchPlayerProfileByNameRequest)(nil), "apipb.FetchPlayerProfileByNameRequest")
 	proto.RegisterType((*FetchPlayerProfileResponse)(nil), "apipb.FetchPlayerProfileResponse")
 	proto.RegisterType((*SetPlayerServerRequest)(nil), "apipb.SetPlayerServerRequest")
 	proto.RegisterType((*RemovePlayerServerRequest)(nil), "apipb.RemovePlayerServerRequest")
 	proto.RegisterType((*SetPlayerSettingsRequest)(nil), "apipb.SetPlayerSettingsRequest")
+	proto.RegisterType((*PunishEntry)(nil), "apipb.PunishEntry")
+	proto.RegisterType((*GetPlayerPunishRequest)(nil), "apipb.GetPlayerPunishRequest")
+	proto.RegisterType((*GetPlayerPunishResponse)(nil), "apipb.GetPlayerPunishResponse")
+	proto.RegisterType((*SetPlayerPunishRequest)(nil), "apipb.SetPlayerPunishRequest")
+	proto.RegisterType((*SetPlayerPunishResponse)(nil), "apipb.SetPlayerPunishResponse")
 	proto.RegisterType((*GroupEntry)(nil), "apipb.GroupEntry")
 	proto.RegisterType((*FetchGroupsRequest)(nil), "apipb.FetchGroupsRequest")
 	proto.RegisterType((*FetchGroupsResponse)(nil), "apipb.FetchGroupsResponse")
 	proto.RegisterEnum("apipb.StreamType", StreamType_name, StreamType_value)
+	proto.RegisterEnum("apipb.PunishLevel", PunishLevel_name, PunishLevel_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -448,15 +771,20 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for Systera service
 
 type SysteraClient interface {
+	Ping(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 	ActionStream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (Systera_ActionStreamClient, error)
+	PunishStream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (Systera_PunishStreamClient, error)
 	Announce(ctx context.Context, in *AnnounceRequest, opts ...grpc.CallOption) (*Empty, error)
 	QuitStream(ctx context.Context, in *QuitStreamRequest, opts ...grpc.CallOption) (*Empty, error)
 	InitPlayerProfile(ctx context.Context, in *InitPlayerProfileRequest, opts ...grpc.CallOption) (*InitPlayerProfileResponse, error)
 	FetchPlayerProfile(ctx context.Context, in *FetchPlayerProfileRequest, opts ...grpc.CallOption) (*FetchPlayerProfileResponse, error)
-	FetchGroups(ctx context.Context, in *FetchGroupsRequest, opts ...grpc.CallOption) (*FetchGroupsResponse, error)
+	FetchPlayerProfileByName(ctx context.Context, in *FetchPlayerProfileByNameRequest, opts ...grpc.CallOption) (*FetchPlayerProfileResponse, error)
 	SetPlayerServer(ctx context.Context, in *SetPlayerServerRequest, opts ...grpc.CallOption) (*Empty, error)
 	RemovePlayerServer(ctx context.Context, in *RemovePlayerServerRequest, opts ...grpc.CallOption) (*Empty, error)
 	SetPlayerSettings(ctx context.Context, in *SetPlayerSettingsRequest, opts ...grpc.CallOption) (*Empty, error)
+	GetPlayerPunish(ctx context.Context, in *GetPlayerPunishRequest, opts ...grpc.CallOption) (*GetPlayerPunishResponse, error)
+	SetPlayerPunish(ctx context.Context, in *SetPlayerPunishRequest, opts ...grpc.CallOption) (*SetPlayerPunishResponse, error)
+	FetchGroups(ctx context.Context, in *FetchGroupsRequest, opts ...grpc.CallOption) (*FetchGroupsResponse, error)
 }
 
 type systeraClient struct {
@@ -465,6 +793,15 @@ type systeraClient struct {
 
 func NewSysteraClient(cc *grpc.ClientConn) SysteraClient {
 	return &systeraClient{cc}
+}
+
+func (c *systeraClient) Ping(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/apipb.Systera/Ping", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *systeraClient) ActionStream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (Systera_ActionStreamClient, error) {
@@ -493,6 +830,38 @@ type systeraActionStreamClient struct {
 
 func (x *systeraActionStreamClient) Recv() (*ActionStreamResponse, error) {
 	m := new(ActionStreamResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *systeraClient) PunishStream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (Systera_PunishStreamClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Systera_serviceDesc.Streams[1], c.cc, "/apipb.Systera/PunishStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &systeraPunishStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Systera_PunishStreamClient interface {
+	Recv() (*PunishStreamResponse, error)
+	grpc.ClientStream
+}
+
+type systeraPunishStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *systeraPunishStreamClient) Recv() (*PunishStreamResponse, error) {
+	m := new(PunishStreamResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -535,9 +904,9 @@ func (c *systeraClient) FetchPlayerProfile(ctx context.Context, in *FetchPlayerP
 	return out, nil
 }
 
-func (c *systeraClient) FetchGroups(ctx context.Context, in *FetchGroupsRequest, opts ...grpc.CallOption) (*FetchGroupsResponse, error) {
-	out := new(FetchGroupsResponse)
-	err := grpc.Invoke(ctx, "/apipb.Systera/FetchGroups", in, out, c.cc, opts...)
+func (c *systeraClient) FetchPlayerProfileByName(ctx context.Context, in *FetchPlayerProfileByNameRequest, opts ...grpc.CallOption) (*FetchPlayerProfileResponse, error) {
+	out := new(FetchPlayerProfileResponse)
+	err := grpc.Invoke(ctx, "/apipb.Systera/FetchPlayerProfileByName", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -571,22 +940,72 @@ func (c *systeraClient) SetPlayerSettings(ctx context.Context, in *SetPlayerSett
 	return out, nil
 }
 
+func (c *systeraClient) GetPlayerPunish(ctx context.Context, in *GetPlayerPunishRequest, opts ...grpc.CallOption) (*GetPlayerPunishResponse, error) {
+	out := new(GetPlayerPunishResponse)
+	err := grpc.Invoke(ctx, "/apipb.Systera/GetPlayerPunish", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systeraClient) SetPlayerPunish(ctx context.Context, in *SetPlayerPunishRequest, opts ...grpc.CallOption) (*SetPlayerPunishResponse, error) {
+	out := new(SetPlayerPunishResponse)
+	err := grpc.Invoke(ctx, "/apipb.Systera/SetPlayerPunish", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systeraClient) FetchGroups(ctx context.Context, in *FetchGroupsRequest, opts ...grpc.CallOption) (*FetchGroupsResponse, error) {
+	out := new(FetchGroupsResponse)
+	err := grpc.Invoke(ctx, "/apipb.Systera/FetchGroups", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Systera service
 
 type SysteraServer interface {
+	Ping(context.Context, *Empty) (*Empty, error)
 	ActionStream(*StreamRequest, Systera_ActionStreamServer) error
+	PunishStream(*StreamRequest, Systera_PunishStreamServer) error
 	Announce(context.Context, *AnnounceRequest) (*Empty, error)
 	QuitStream(context.Context, *QuitStreamRequest) (*Empty, error)
 	InitPlayerProfile(context.Context, *InitPlayerProfileRequest) (*InitPlayerProfileResponse, error)
 	FetchPlayerProfile(context.Context, *FetchPlayerProfileRequest) (*FetchPlayerProfileResponse, error)
-	FetchGroups(context.Context, *FetchGroupsRequest) (*FetchGroupsResponse, error)
+	FetchPlayerProfileByName(context.Context, *FetchPlayerProfileByNameRequest) (*FetchPlayerProfileResponse, error)
 	SetPlayerServer(context.Context, *SetPlayerServerRequest) (*Empty, error)
 	RemovePlayerServer(context.Context, *RemovePlayerServerRequest) (*Empty, error)
 	SetPlayerSettings(context.Context, *SetPlayerSettingsRequest) (*Empty, error)
+	GetPlayerPunish(context.Context, *GetPlayerPunishRequest) (*GetPlayerPunishResponse, error)
+	SetPlayerPunish(context.Context, *SetPlayerPunishRequest) (*SetPlayerPunishResponse, error)
+	FetchGroups(context.Context, *FetchGroupsRequest) (*FetchGroupsResponse, error)
 }
 
 func RegisterSysteraServer(s *grpc.Server, srv SysteraServer) {
 	s.RegisterService(&_Systera_serviceDesc, srv)
+}
+
+func _Systera_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SysteraServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apipb.Systera/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SysteraServer).Ping(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Systera_ActionStream_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -607,6 +1026,27 @@ type systeraActionStreamServer struct {
 }
 
 func (x *systeraActionStreamServer) Send(m *ActionStreamResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Systera_PunishStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(SysteraServer).PunishStream(m, &systeraPunishStreamServer{stream})
+}
+
+type Systera_PunishStreamServer interface {
+	Send(*PunishStreamResponse) error
+	grpc.ServerStream
+}
+
+type systeraPunishStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *systeraPunishStreamServer) Send(m *PunishStreamResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -682,20 +1122,20 @@ func _Systera_FetchPlayerProfile_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Systera_FetchGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FetchGroupsRequest)
+func _Systera_FetchPlayerProfileByName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FetchPlayerProfileByNameRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SysteraServer).FetchGroups(ctx, in)
+		return srv.(SysteraServer).FetchPlayerProfileByName(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/apipb.Systera/FetchGroups",
+		FullMethod: "/apipb.Systera/FetchPlayerProfileByName",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SysteraServer).FetchGroups(ctx, req.(*FetchGroupsRequest))
+		return srv.(SysteraServer).FetchPlayerProfileByName(ctx, req.(*FetchPlayerProfileByNameRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -754,10 +1194,68 @@ func _Systera_SetPlayerSettings_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Systera_GetPlayerPunish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPlayerPunishRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SysteraServer).GetPlayerPunish(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apipb.Systera/GetPlayerPunish",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SysteraServer).GetPlayerPunish(ctx, req.(*GetPlayerPunishRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Systera_SetPlayerPunish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPlayerPunishRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SysteraServer).SetPlayerPunish(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apipb.Systera/SetPlayerPunish",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SysteraServer).SetPlayerPunish(ctx, req.(*SetPlayerPunishRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Systera_FetchGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FetchGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SysteraServer).FetchGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apipb.Systera/FetchGroups",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SysteraServer).FetchGroups(ctx, req.(*FetchGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Systera_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "apipb.Systera",
 	HandlerType: (*SysteraServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Ping",
+			Handler:    _Systera_Ping_Handler,
+		},
 		{
 			MethodName: "Announce",
 			Handler:    _Systera_Announce_Handler,
@@ -775,8 +1273,8 @@ var _Systera_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Systera_FetchPlayerProfile_Handler,
 		},
 		{
-			MethodName: "FetchGroups",
-			Handler:    _Systera_FetchGroups_Handler,
+			MethodName: "FetchPlayerProfileByName",
+			Handler:    _Systera_FetchPlayerProfileByName_Handler,
 		},
 		{
 			MethodName: "SetPlayerServer",
@@ -790,11 +1288,28 @@ var _Systera_serviceDesc = grpc.ServiceDesc{
 			MethodName: "SetPlayerSettings",
 			Handler:    _Systera_SetPlayerSettings_Handler,
 		},
+		{
+			MethodName: "GetPlayerPunish",
+			Handler:    _Systera_GetPlayerPunish_Handler,
+		},
+		{
+			MethodName: "SetPlayerPunish",
+			Handler:    _Systera_SetPlayerPunish_Handler,
+		},
+		{
+			MethodName: "FetchGroups",
+			Handler:    _Systera_FetchGroups_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "ActionStream",
 			Handler:       _Systera_ActionStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "PunishStream",
+			Handler:       _Systera_PunishStream_Handler,
 			ServerStreams: true,
 		},
 	},
@@ -804,52 +1319,78 @@ var _Systera_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("systera.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 737 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xb4, 0x55, 0x5b, 0x6f, 0xd3, 0x30,
-	0x14, 0x6e, 0x7a, 0xd9, 0xba, 0xd3, 0x95, 0xad, 0x66, 0xaa, 0xd2, 0x00, 0x23, 0x58, 0x20, 0xca,
-	0x1e, 0x0a, 0x2a, 0x08, 0x21, 0x26, 0x21, 0xba, 0x1b, 0x14, 0xa4, 0x29, 0x4b, 0x37, 0x69, 0xd2,
-	0x9e, 0xd2, 0xce, 0x6b, 0x23, 0x9a, 0x0b, 0xb1, 0x3b, 0x91, 0x77, 0x78, 0xe7, 0x17, 0xf1, 0xdb,
-	0x50, 0x1c, 0xa7, 0x71, 0x7a, 0xd9, 0x00, 0x89, 0xb7, 0xf8, 0x3b, 0xe7, 0x7c, 0x39, 0x37, 0x7f,
-	0x86, 0x2a, 0x0d, 0x29, 0x23, 0x81, 0xd5, 0xf2, 0x03, 0x8f, 0x79, 0xa8, 0x64, 0xf9, 0xb6, 0xdf,
-	0xc7, 0xab, 0x50, 0x3a, 0x74, 0x7c, 0x16, 0xe2, 0x4f, 0x50, 0xed, 0xb1, 0x80, 0x58, 0x8e, 0x49,
-	0xbe, 0x4e, 0x08, 0x65, 0x08, 0x41, 0xd1, 0xb5, 0x1c, 0xa2, 0x2a, 0xba, 0xd2, 0x5c, 0x33, 0xf9,
-	0x37, 0x7a, 0x02, 0x45, 0x16, 0xfa, 0x44, 0xcd, 0xeb, 0x4a, 0xf3, 0x4e, 0xbb, 0xd6, 0xe2, 0x1c,
-	0xad, 0x38, 0xee, 0x34, 0xf4, 0x89, 0xc9, 0xcd, 0x78, 0x08, 0x5b, 0x9d, 0x01, 0xb3, 0x3d, 0x37,
-	0x61, 0xa4, 0xbe, 0xe7, 0xd2, 0x34, 0x5c, 0xb9, 0x31, 0x1c, 0xd5, 0x61, 0x85, 0x59, 0xc1, 0x90,
-	0x30, 0xfe, 0x9f, 0x35, 0x53, 0x9c, 0xd0, 0x26, 0x14, 0x06, 0xce, 0xa5, 0x5a, 0xe0, 0x60, 0xf4,
-	0x89, 0xf7, 0x61, 0xa3, 0xe3, 0xba, 0xde, 0xc4, 0x1d, 0x90, 0x24, 0xed, 0x34, 0x58, 0xc9, 0x04,
-	0xab, 0xb0, 0xea, 0x10, 0x4a, 0xad, 0x21, 0x11, 0xac, 0xc9, 0x11, 0x3f, 0x85, 0xda, 0xc9, 0xc4,
-	0x66, 0xb7, 0x56, 0x8f, 0xbf, 0x2b, 0xa0, 0x76, 0x5d, 0x9b, 0x19, 0x63, 0x2b, 0x24, 0x81, 0x11,
-	0x78, 0x57, 0xf6, 0x78, 0xfa, 0xdf, 0x6d, 0x00, 0x9f, 0xe3, 0x67, 0x67, 0xdd, 0x03, 0x11, 0x26,
-	0x21, 0xa9, 0xfd, 0x38, 0xa2, 0xcd, 0xcb, 0xf6, 0x08, 0x41, 0x4d, 0xd8, 0x88, 0x4f, 0x5d, 0xa3,
-	0x73, 0x79, 0x19, 0x10, 0x4a, 0x45, 0xa1, 0xb3, 0x30, 0xde, 0x85, 0xc6, 0x82, 0x2c, 0x44, 0x8b,
-	0xb7, 0x01, 0x46, 0x16, 0x15, 0x28, 0x4f, 0xa3, 0x6c, 0x4a, 0x48, 0x14, 0x7c, 0x44, 0xd8, 0x60,
-	0xf4, 0x2f, 0x35, 0xe0, 0x5f, 0x0a, 0x68, 0x8b, 0xa2, 0xc5, 0xbf, 0xeb, 0xb0, 0x32, 0x0c, 0xbc,
-	0x89, 0x4f, 0x55, 0x45, 0x2f, 0x44, 0xad, 0x8f, 0x4f, 0xe8, 0x33, 0x94, 0x29, 0x61, 0xcc, 0x76,
-	0x87, 0x54, 0xcd, 0xeb, 0x85, 0x66, 0xa5, 0xfd, 0x5c, 0x8c, 0x7e, 0x39, 0x59, 0xab, 0x27, 0x22,
-	0x0e, 0x5d, 0x16, 0x84, 0xe6, 0x94, 0x40, 0xdb, 0x85, 0x6a, 0xc6, 0x14, 0x6d, 0xc5, 0x17, 0x12,
-	0x8a, 0x6c, 0xa3, 0x4f, 0xb4, 0x05, 0xa5, 0x6b, 0x6b, 0x3c, 0x89, 0xbb, 0x5c, 0x36, 0xe3, 0xc3,
-	0xdb, 0xfc, 0x1b, 0x05, 0x9f, 0x43, 0xbd, 0x47, 0x44, 0xe7, 0x7a, 0x24, 0xb8, 0x26, 0xc1, 0x5f,
-	0x8c, 0x8f, 0xf2, 0x00, 0x79, 0x7c, 0x29, 0x82, 0x2f, 0xa0, 0x61, 0x12, 0xc7, 0xbb, 0x26, 0xff,
-	0x83, 0xbc, 0x0f, 0xaa, 0x94, 0x76, 0x5c, 0xfc, 0x9f, 0x72, 0x8b, 0xf6, 0xe4, 0x17, 0xb4, 0xa7,
-	0x20, 0xb5, 0x07, 0xff, 0x54, 0x00, 0x3e, 0x44, 0xf3, 0x8a, 0xbb, 0x7a, 0x1f, 0xd6, 0xf8, 0xf4,
-	0x8e, 0xd3, 0x4b, 0x90, 0x02, 0x48, 0x87, 0x0a, 0x3f, 0x18, 0x01, 0xb9, 0xb2, 0xbf, 0x09, 0x72,
-	0x19, 0xe2, 0x1e, 0x63, 0xaf, 0x6f, 0x8d, 0x0d, 0x12, 0x38, 0xd1, 0x2a, 0x17, 0xb8, 0x47, 0x0a,
-	0x45, 0x1e, 0x71, 0x89, 0xb1, 0x47, 0x31, 0xf6, 0x90, 0x20, 0xfc, 0x0a, 0x10, 0x5f, 0x10, 0x9e,
-	0x96, 0x5c, 0xb0, 0xd4, 0x2c, 0x65, 0xae, 0x59, 0xef, 0xe1, 0x6e, 0x26, 0x4a, 0x2c, 0xe7, 0xb3,
-	0xcc, 0x72, 0x56, 0xa6, 0xea, 0x93, 0xd6, 0x9c, 0xec, 0xeb, 0xce, 0x63, 0x80, 0x54, 0x93, 0x50,
-	0x19, 0x8a, 0x27, 0x67, 0xdd, 0xd3, 0xcd, 0x1c, 0x5a, 0x87, 0xf2, 0x41, 0xb7, 0x67, 0x74, 0x4e,
-	0xf7, 0x3f, 0x6e, 0x2a, 0xed, 0x1f, 0x25, 0x58, 0xed, 0xc5, 0x92, 0x8a, 0x0e, 0x61, 0x5d, 0x16,
-	0x3c, 0xb4, 0x95, 0x91, 0x36, 0x91, 0xb9, 0x76, 0x4f, 0xa0, 0x8b, 0xb4, 0x11, 0xe7, 0x5e, 0x28,
-	0xa8, 0x0d, 0xe5, 0x44, 0xce, 0x50, 0x3d, 0x71, 0xce, 0xea, 0x9b, 0xb6, 0x2e, 0xf0, 0x58, 0xb5,
-	0x73, 0xe8, 0x35, 0x40, 0xaa, 0x5e, 0x48, 0x15, 0xd6, 0x39, 0x41, 0x9b, 0x8b, 0x3b, 0x87, 0xda,
-	0x9c, 0x8a, 0xa0, 0x87, 0xc2, 0x69, 0x99, 0xca, 0x69, 0xfa, 0x72, 0x87, 0xa4, 0x0e, 0x74, 0x21,
-	0xc6, 0x96, 0xa5, 0xd6, 0x6f, 0xb8, 0xf2, 0x31, 0xf7, 0xa3, 0x5b, 0x45, 0x01, 0xe7, 0xd0, 0x11,
-	0x54, 0xa4, 0xe9, 0xa2, 0x86, 0x1c, 0x93, 0xd9, 0x13, 0x4d, 0x5b, 0x64, 0x9a, 0xf2, 0xbc, 0x83,
-	0x8d, 0x19, 0x25, 0x40, 0x0f, 0x92, 0xa1, 0x2d, 0x54, 0x88, 0x6c, 0x03, 0xd1, 0x01, 0xa0, 0xf9,
-	0xfb, 0x3e, 0x2d, 0x72, 0xa9, 0x14, 0xcc, 0xb0, 0xec, 0x41, 0x6d, 0xee, 0x62, 0x4f, 0x87, 0xb0,
-	0xec, 0xca, 0x67, 0x39, 0xf6, 0x76, 0xa0, 0xe1, 0x12, 0xd6, 0xa2, 0xa1, 0x3b, 0x18, 0xb1, 0x91,
-	0x6d, 0x45, 0xc6, 0x96, 0x78, 0xeb, 0xf7, 0xaa, 0x62, 0x43, 0x8d, 0xe8, 0xcd, 0xa7, 0xfd, 0x15,
-	0xfe, 0xf6, 0xbf, 0xfc, 0x1d, 0x00, 0x00, 0xff, 0xff, 0x72, 0x1f, 0x7b, 0x75, 0x0c, 0x08, 0x00,
-	0x00,
+	// 1161 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xb4, 0x57, 0xdf, 0x73, 0xdb, 0xc4,
+	0x13, 0x8f, 0x6c, 0x27, 0x71, 0xd6, 0x49, 0xe3, 0xdc, 0x37, 0x93, 0x2a, 0xfe, 0x96, 0xd4, 0xdc,
+	0x40, 0x09, 0x79, 0x30, 0x60, 0x52, 0x86, 0xa1, 0x33, 0x0c, 0x4e, 0xec, 0x14, 0x93, 0x4e, 0x50,
+	0x25, 0x67, 0xe8, 0x4c, 0x9f, 0x14, 0xfb, 0xec, 0x68, 0x90, 0x25, 0x21, 0x9d, 0x43, 0xfd, 0xc4,
+	0x43, 0x79, 0xe3, 0x85, 0x27, 0xfe, 0x5c, 0x86, 0xb9, 0x1f, 0x92, 0x4e, 0x96, 0x95, 0xa4, 0xfc,
+	0x78, 0xbb, 0xdd, 0xdb, 0xdd, 0xdb, 0xdb, 0xdd, 0xfb, 0xec, 0x1e, 0x6c, 0x45, 0xf3, 0x88, 0x92,
+	0xd0, 0x6e, 0x05, 0xa1, 0x4f, 0x7d, 0xb4, 0x6a, 0x07, 0x4e, 0x70, 0x85, 0xd7, 0x61, 0xb5, 0x37,
+	0x0d, 0xe8, 0x1c, 0x1f, 0x03, 0x18, 0xae, 0x3d, 0x27, 0x61, 0xd7, 0xa6, 0x36, 0x42, 0x50, 0xb9,
+	0xbc, 0xec, 0x77, 0x75, 0xad, 0xa9, 0x1d, 0x6e, 0x98, 0x95, 0xd9, 0x65, 0xbf, 0xcb, 0x78, 0x9e,
+	0x3d, 0x25, 0x7a, 0x49, 0xf0, 0xd8, 0x1a, 0x7f, 0x07, 0x5b, 0x16, 0x0d, 0x89, 0x3d, 0x35, 0xc9,
+	0x4f, 0x33, 0x12, 0xd1, 0x44, 0x48, 0x4b, 0x85, 0xd0, 0x87, 0x50, 0xa1, 0xf3, 0x40, 0x28, 0x3e,
+	0x68, 0xef, 0xb4, 0xf8, 0xc9, 0x2d, 0xa1, 0x37, 0x98, 0x07, 0xc4, 0xe4, 0xdb, 0x78, 0x02, 0xbb,
+	0x9d, 0x21, 0x75, 0x7c, 0x2f, 0xb6, 0x18, 0x05, 0xbe, 0x17, 0xa5, 0xea, 0xda, 0xad, 0xea, 0x68,
+	0x0f, 0xd6, 0xa8, 0x1d, 0x4e, 0x08, 0x95, 0x0e, 0x4a, 0x0a, 0xd5, 0xa1, 0x3c, 0x9c, 0x8e, 0xf4,
+	0x32, 0x67, 0xb2, 0x25, 0xfe, 0x05, 0x76, 0x8d, 0x99, 0xe7, 0x44, 0xd7, 0xff, 0xee, 0x41, 0x87,
+	0xb0, 0x4a, 0x3c, 0x1a, 0xce, 0xf9, 0x51, 0xb5, 0x36, 0x92, 0xfa, 0xe2, 0xa8, 0x1e, 0xdb, 0x31,
+	0x85, 0x00, 0x3e, 0x85, 0xed, 0x8e, 0xe7, 0xf9, 0x33, 0x6f, 0x48, 0xe2, 0xb8, 0xa5, 0x46, 0xb5,
+	0x8c, 0x51, 0x1d, 0xd6, 0xa7, 0x24, 0x8a, 0xec, 0x49, 0x1c, 0xf7, 0x98, 0xc4, 0x1f, 0xc1, 0xce,
+	0xcb, 0x99, 0x43, 0xef, 0x0c, 0x3f, 0xfe, 0x55, 0x03, 0xbd, 0xef, 0x39, 0x54, 0xa4, 0xd7, 0x08,
+	0xfd, 0xb1, 0xe3, 0x26, 0xe7, 0x1e, 0x00, 0x04, 0x9c, 0xaf, 0xa4, 0x5b, 0xe1, 0xa4, 0xfb, 0x17,
+	0x69, 0xea, 0x15, 0x0e, 0x3a, 0x84, 0x6d, 0x41, 0xf5, 0x8d, 0xce, 0x68, 0x14, 0x92, 0x28, 0x92,
+	0x91, 0x5e, 0x64, 0xe3, 0x67, 0xb0, 0xbf, 0xc4, 0x0b, 0x19, 0xfa, 0x03, 0x80, 0x6b, 0x3b, 0x92,
+	0x5c, 0xee, 0x46, 0xd5, 0x54, 0x38, 0x4c, 0xf9, 0x8c, 0xd0, 0xe1, 0xf5, 0xdf, 0xb9, 0x03, 0xee,
+	0xc0, 0xe3, 0xbc, 0xf2, 0xc9, 0x9c, 0xf9, 0x9f, 0x33, 0x71, 0x91, 0x46, 0x4f, 0xe1, 0xe0, 0x3f,
+	0x35, 0x68, 0x2c, 0x73, 0x20, 0x75, 0xff, 0x1f, 0x45, 0x71, 0x0f, 0xd6, 0x26, 0xa1, 0x3f, 0x0b,
+	0x58, 0xf0, 0xca, 0x2c, 0xfb, 0x82, 0x42, 0xe7, 0x50, 0x8d, 0x08, 0xa5, 0x8e, 0x37, 0x89, 0xf4,
+	0x4a, 0xb3, 0x7c, 0x58, 0x6b, 0x7f, 0x22, 0xab, 0xaa, 0xd8, 0x99, 0x96, 0x25, 0x35, 0x44, 0xc9,
+	0x25, 0x06, 0x1a, 0xcf, 0x60, 0x2b, 0xb3, 0xc5, 0x5e, 0xc6, 0x8f, 0x64, 0x2e, 0xdd, 0x65, 0x4b,
+	0xb4, 0x0b, 0xab, 0x37, 0xb6, 0x3b, 0x13, 0x2e, 0x56, 0x4d, 0x41, 0x7c, 0x55, 0xfa, 0x52, 0xc3,
+	0xaf, 0x60, 0xcf, 0x22, 0x32, 0x79, 0x16, 0x09, 0x6f, 0x48, 0xf8, 0x0e, 0x15, 0x14, 0x71, 0x05,
+	0xf5, 0xee, 0x29, 0x07, 0xbf, 0x86, 0x7d, 0x93, 0x4c, 0xfd, 0x1b, 0xf2, 0x5f, 0x18, 0xbf, 0x02,
+	0x5d, 0x71, 0x5b, 0x5c, 0xfe, 0xbe, 0xb6, 0x65, 0x78, 0x4a, 0x4b, 0xc2, 0x53, 0x56, 0xc2, 0x83,
+	0xdf, 0x96, 0xa0, 0xa6, 0x3c, 0x72, 0xf4, 0x08, 0x36, 0xec, 0x1b, 0xdb, 0x71, 0xed, 0xab, 0xa4,
+	0x94, 0x53, 0x06, 0x43, 0x09, 0x97, 0xdc, 0x10, 0x57, 0xa2, 0x61, 0x16, 0x25, 0x5e, 0xb0, 0x1d,
+	0x53, 0x08, 0xb0, 0xa2, 0x08, 0x89, 0x1d, 0xf9, 0x9e, 0x7c, 0x51, 0x92, 0x62, 0x6f, 0x7c, 0x64,
+	0x53, 0xa2, 0x57, 0x9a, 0xda, 0x61, 0xd9, 0xe4, 0x6b, 0x26, 0x4b, 0xde, 0x04, 0x4e, 0x48, 0xf4,
+	0x55, 0xce, 0x95, 0x14, 0x7a, 0x0a, 0x9b, 0x01, 0xb7, 0x4c, 0x46, 0x67, 0xa1, 0x3f, 0xd5, 0xd7,
+	0x38, 0x34, 0xc5, 0xd0, 0x96, 0x02, 0xbe, 0x99, 0x11, 0x43, 0x9f, 0x01, 0xc4, 0xf4, 0xc0, 0xd7,
+	0xd7, 0x8b, 0x94, 0x14, 0x21, 0xfc, 0x87, 0x06, 0x7b, 0xcf, 0xe3, 0x50, 0x8b, 0xdb, 0xdc, 0x37,
+	0xd0, 0xc7, 0x50, 0x1b, 0x3b, 0x2e, 0x25, 0xe1, 0x8b, 0x3b, 0x02, 0xa3, 0x8a, 0xa1, 0x27, 0xf0,
+	0xc0, 0xf1, 0x86, 0xee, 0x6c, 0x44, 0x7a, 0xfc, 0xae, 0x23, 0x99, 0x95, 0x05, 0x2e, 0x3e, 0x85,
+	0x87, 0x39, 0xbf, 0xe4, 0xb3, 0x4d, 0x10, 0x5b, 0xe3, 0x6f, 0xeb, 0x16, 0xc4, 0x0e, 0x94, 0xf2,
+	0xcf, 0x5e, 0x8e, 0x67, 0x69, 0xea, 0xd3, 0x38, 0xd5, 0x92, 0x62, 0xb5, 0x32, 0xf6, 0xc3, 0x61,
+	0xf2, 0x94, 0x38, 0xf1, 0x0e, 0x3d, 0xe2, 0x37, 0x0d, 0x1e, 0x5a, 0x05, 0x7e, 0x3f, 0x82, 0x0d,
+	0xcf, 0x0f, 0x32, 0x60, 0x99, 0x32, 0x58, 0xcb, 0xf0, 0xc7, 0x63, 0xd7, 0xf1, 0xe2, 0xb3, 0x63,
+	0x92, 0xe9, 0x8d, 0x66, 0x81, 0xeb, 0x0c, 0x59, 0xf9, 0x88, 0x68, 0xa5, 0x0c, 0xd4, 0x80, 0xea,
+	0xd0, 0xf7, 0xdd, 0x91, 0xff, 0xb3, 0xc7, 0x6b, 0xab, 0x6a, 0x26, 0x34, 0xfe, 0x5d, 0x03, 0x78,
+	0xce, 0x30, 0x29, 0x29, 0x71, 0x8e, 0x50, 0x0a, 0x5a, 0xa6, 0x0c, 0xd4, 0x84, 0x1a, 0x27, 0x8c,
+	0x90, 0x8c, 0x9d, 0x37, 0xf2, 0x01, 0xa9, 0x2c, 0x2e, 0xe1, 0xfa, 0x57, 0xb6, 0x6b, 0x90, 0x70,
+	0x1a, 0x83, 0x9e, 0xca, 0x62, 0x12, 0xe2, 0x19, 0x0b, 0x89, 0x8a, 0x90, 0x50, 0x58, 0xf8, 0x18,
+	0x10, 0x07, 0x41, 0xee, 0x96, 0xfa, 0xa8, 0x15, 0x40, 0xd0, 0x72, 0x80, 0xf0, 0x0d, 0xfc, 0x2f,
+	0xa3, 0x25, 0x23, 0xfa, 0x71, 0x02, 0xc0, 0xa2, 0x14, 0xe2, 0x62, 0x4f, 0xef, 0x1c, 0x63, 0xf2,
+	0x51, 0x1b, 0x20, 0x1d, 0x09, 0x50, 0x15, 0x2a, 0x2f, 0x2f, 0xfb, 0x83, 0xfa, 0x0a, 0xda, 0x84,
+	0xaa, 0xd9, 0xb3, 0x06, 0xdf, 0x9b, 0xbd, 0x6e, 0x5d, 0x63, 0x54, 0xb7, 0x6f, 0x19, 0x9d, 0xc1,
+	0xe9, 0xb7, 0xf5, 0xd2, 0xd1, 0xd3, 0x18, 0x21, 0x44, 0xe9, 0x56, 0xa1, 0xf2, 0x43, 0xc7, 0xbc,
+	0xa8, 0xaf, 0xb0, 0xd5, 0x79, 0xff, 0xf4, 0xbc, 0xae, 0xb1, 0xd5, 0xe0, 0xa4, 0x73, 0x51, 0x2f,
+	0xb1, 0x95, 0xc1, 0x56, 0xe5, 0xf6, 0xdb, 0x2a, 0xac, 0x5b, 0x62, 0x6a, 0x43, 0x1f, 0x40, 0xc5,
+	0x70, 0xbc, 0x09, 0xda, 0x94, 0x9e, 0xf1, 0xa9, 0xad, 0x91, 0xa1, 0xf0, 0x0a, 0xea, 0xc1, 0xa6,
+	0x3a, 0x43, 0xa1, 0xdd, 0xcc, 0x10, 0x23, 0x83, 0xd4, 0xf8, 0xbf, 0xe4, 0x2e, 0x1b, 0xb7, 0xf0,
+	0xca, 0xa7, 0x1a, 0x33, 0xa3, 0x4e, 0x48, 0x77, 0x98, 0x59, 0x36, 0x4c, 0x71, 0x33, 0x6d, 0xa8,
+	0xc6, 0x73, 0x0e, 0xda, 0x8b, 0xcf, 0xcc, 0x0e, 0x3e, 0xb9, 0x1b, 0x7c, 0x01, 0x90, 0x8e, 0x35,
+	0x48, 0x97, 0xbb, 0xb9, 0x49, 0x27, 0xa7, 0xf7, 0x0a, 0x76, 0x72, 0xe3, 0x05, 0x7a, 0x2c, 0x85,
+	0x8a, 0xc6, 0x9f, 0x46, 0xb3, 0x58, 0x20, 0xbe, 0x07, 0x7a, 0x2d, 0x0b, 0x2d, 0x6b, 0xba, 0x79,
+	0x4b, 0x23, 0x16, 0xb6, 0xdf, 0xbf, 0xb3, 0x55, 0xe3, 0x15, 0x34, 0x01, 0xbd, 0x68, 0x36, 0x41,
+	0x4f, 0x0a, 0x0d, 0x64, 0x86, 0x97, 0xfb, 0x1d, 0xf4, 0x35, 0x6c, 0x2f, 0x34, 0x70, 0xf4, 0x5e,
+	0x9c, 0xd5, 0xa5, 0x8d, 0x3d, 0x1b, 0x61, 0xd4, 0x05, 0x94, 0x6f, 0xd3, 0x49, 0x14, 0x0a, 0x3b,
+	0xf8, 0x82, 0x95, 0x13, 0xd8, 0xc9, 0xf5, 0xe3, 0x24, 0x4b, 0x45, 0x9d, 0x7a, 0xc1, 0x86, 0x09,
+	0xdb, 0x0b, 0x80, 0x9e, 0xdc, 0x64, 0x79, 0x03, 0x6a, 0x1c, 0x14, 0x6d, 0x27, 0xd1, 0x31, 0x95,
+	0xe8, 0x2c, 0xd8, 0xb4, 0x6e, 0xb7, 0x69, 0x15, 0xda, 0x3c, 0x83, 0x9a, 0x02, 0x35, 0x68, 0x5f,
+	0xcd, 0x52, 0x06, 0xb4, 0x1a, 0x8d, 0x65, 0x5b, 0xb1, 0x9d, 0x93, 0x23, 0xd8, 0xf7, 0x08, 0x6d,
+	0x45, 0x73, 0x6f, 0x78, 0x4d, 0xaf, 0x1d, 0x9b, 0x09, 0xb7, 0xe4, 0x67, 0xee, 0x64, 0x4b, 0xe2,
+	0x83, 0xc1, 0x3e, 0x75, 0xd1, 0xd5, 0x1a, 0xff, 0xdc, 0x7d, 0xfe, 0x57, 0x00, 0x00, 0x00, 0xff,
+	0xff, 0xf6, 0x5d, 0x4c, 0x4d, 0xed, 0x0d, 0x00, 0x00,
 }
