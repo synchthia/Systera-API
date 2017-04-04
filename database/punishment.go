@@ -106,6 +106,7 @@ func SetPlayerPunishment(force bool, from, to PunishPlayerData, level PunishLeve
 		profile.One(&playerData)
 
 		// Convert true Name
+		to.UUID = playerData.UUID
 		to.Name = playerData.Name
 
 		// if Offline
