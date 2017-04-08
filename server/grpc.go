@@ -140,6 +140,10 @@ func (s *grpcServer) QuitStream(ctx context.Context, e *pb.QuitStreamRequest) (*
 	for c := range s.asrChans {
 		c <- pb.ActionStreamResponse{Type: pb.StreamType_QUIT, Target: e.Name}
 	}
+
+	for c := range s.psrChans {
+		c <- pb.PunishStreamResponse{Type: pb.StreamType_QUIT, Target: e.Name}
+	}
 	return &pb.Empty{}, nil
 }
 
