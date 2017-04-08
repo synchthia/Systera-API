@@ -6,16 +6,17 @@ import (
 	"time"
 
 	"gopkg.in/mgo.v2"
+	"strings"
 )
 
 var session *mgo.Session
 
-func NewMongoSession() {
-	address := []string{"192.168.99.100:27017"}
-	log.Printf("[MongoDB]: Connecting to: %s...", address)
+func NewMongoSession(address string) {
+	addresses := strings.Split(address, ",")
+	log.Printf("[MongoDB]: Connecting to: %s...", addresses)
 
 	di := &mgo.DialInfo{
-		Addrs:   address,
+		Addrs:   addresses,
 		Timeout: 5 * time.Second,
 	}
 
