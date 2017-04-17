@@ -43,5 +43,5 @@ build-image:
   stage: build_image
   script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-    - docker build -t registry.gitlab.com/laica_lunasys/systera-api .
+    - docker build -t registry.gitlab.com/startail/systera-api .
     - docker push registry.gitlab.com/startail/systera-api
