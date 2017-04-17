@@ -1,0 +1,47 @@
+image: alpine:latest
+services:
+  - docker:dind
+
+cache:
+  untracked: true
+  key: "golang"
+  paths:
+    - /go
+    - /lib
+    - /lib64
+
+variables:
+  GOPATH: "/go"
+  PROJECT_PATH: "/go/src/gitlab.com/Startail/Systera-API"
+
+stages:
+ - build_image
+
+before_script:
+  # Define Build Path
+  - export CURRENT_BUILD_PATH=$(pwd)
+
+  # Setup Go
+  - apk --update add git wget ca-certificates tar
+  - wget https://storage.googleapis.com/golang/go1.8.1.linux-amd64.tar.gz
+  - tar -vC /usr/local -xzf go1.8.1.linux-amd64.tar.gz
+  - mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
+  - export PATH=$PATH:/usr/local/go/bin
+
+  # Mkdir GOPATH/Directory
+  - mkdir -p $PROJECT_PATH
+  - cp -Rfv $CURRENT_BUILD_PATH $PROJECT_PATH/..
+
+  # Build
+  - cd $PROJECT_PATH/cmd/api-server
+  - go get -v
+  - cd $PROJECT_PATH
+  - go build cmd/api-server/main.go
+
+build-image:
+  image: docker:latest
+  stage: build_image
+  script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+    - docker build -t registry.gitlab.com/laica_lunasys/systera-api .
+    - docker push registry.gitlab.com/startail/systera-api
