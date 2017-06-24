@@ -34,7 +34,7 @@ service Systera {
 /*
  * Stream API
  */
-enum StreamType { QUIT = 0; RESTORED = 1; DISPATCH = 2; }
+enum StreamType { QUIT = 0; CONNECT = 1; RESTORED = 2; DISPATCH = 3; }
 message StreamRequest { string name = 1; StreamType type = 2; }
 message ActionStreamResponse { StreamType type = 1; string target = 2; string cmd = 3; }
 message PunishStreamResponse { StreamType type = 1; string target = 2; PunishEntry entry = 3; }
