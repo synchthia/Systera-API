@@ -1,36 +1,47 @@
 package database
 
 import (
-	"gopkg.in/mgo.v2/bson"
-	"time"
-	"log"
 	"strings"
+	"time"
+
+	"github.com/sirupsen/logrus"
+	"gopkg.in/mgo.v2/bson"
 )
 
+// PunishLevel - Punishment level
 type PunishLevel int32
 
+const (
+	//WARN - Warning
+	WARN PunishLevel = iota
+
+	//KICK - Kick from Server
+	KICK
+
+	//TBAN - Temporary BAN
+	TBAN
+
+	//PBAN - Permanently BAN
+	PBAN
+)
+
+// PunishmentData - PunishData on Database
 type PunishmentData struct {
-	ID           bson.ObjectId `bson:"_id,omitempty"`
-	Available    bool          `bson:"available"`
-	Level        PunishLevel   `bson:"level"`
-	Reason       string        `bson:"reason"`
-	Date         int64         `bson:"date"`
-	Expire       int64         `bson:"expire,omitempty"`
+	ID           bson.ObjectId    `bson:"_id,omitempty"`
+	Available    bool             `bson:"available"`
+	Level        PunishLevel      `bson:"level"`
+	Reason       string           `bson:"reason"`
+	Date         int64            `bson:"date"`
+	Expire       int64            `bson:"expire,omitempty"`
 	PunishedFrom PunishPlayerData `bson:"punished_from"`
 	PunishedTo   PunishPlayerData `bson:"punished_to"`
 }
 
+// PunishPlayerData - Punish PlayerData
 type PunishPlayerData struct {
 	UUID string `bson:"uuid"`
 	Name string `bson:"name"`
 }
-
-const (
-	WARN PunishLevel = iota
-	KICK 
-	TBAN 
-	PBAN 
-)
 
 func (i PunishLevel) String() string {
 	switch i {
@@ -46,8 +57,13 @@ func (i PunishLevel) String() string {
 	return ""
 }
 
+// GetPlayerPunishment - Get Player Punishment History
 func GetPlayerPunishment(playerUUID string, filterLevel PunishLevel, includeExpired bool) ([]PunishmentData, error) {
-	session := GetMongoSession().Copy()
+	if _, err := GetMongoSession(); err != nil {
+		return nil, err
+	}
+
+	session := session.Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("punishments")
 
@@ -62,7 +78,7 @@ func GetPlayerPunishment(playerUUID string, filterLevel PunishLevel, includeExpi
 				"level":            bson.M{"$gte": filterLevel},
 			}).All(&lookup)
 		if err != nil {
-			log.Printf("[!!!]: Error @ GetPlayerPunishment(%s) from MongoDB: %s", playerUUID, err)
+			logrus.WithError(err).Errorf("[Punish] Failed GetPlayerPunishment(%s)", playerUUID)
 			return nil, err
 		}
 	} else {
@@ -74,20 +90,26 @@ func GetPlayerPunishment(playerUUID string, filterLevel PunishLevel, includeExpi
 				"$or":              []bson.M{{"expire": bson.M{"$exists": false}}, {"expire": bson.M{"$gte": nowtime}}},
 			}).All(&lookup)
 		if err != nil {
-			log.Printf("[!!!]: Error @ GetPlayerPunishment(%s) from MongoDB: %s", playerUUID, err)
+			logrus.WithError(err).Errorf("[Punish] Failed GetPlayerPunishment(%s)", playerUUID)
 			return nil, err
 		}
 	}
 	return lookup, nil
 }
 
+// SetPlayerPunishment - Punish Player
 func SetPlayerPunishment(force bool, from, to PunishPlayerData, level PunishLevel, reason string, date, expire int64) (bool, bool, bool, bool, error) {
-	session := GetMongoSession().Copy()
+	if _, err := GetMongoSession(); err != nil {
+		return false, false, false, false, err
+	}
+
+	session := session.Copy()
 	defer session.Close()
+
 	playerColl := session.DB("systera").C("players")
 	punishColl := session.DB("systera").C("punishments")
 
-	/* Error */
+	//Error
 	noProfile := false
 	offline := false
 
@@ -97,7 +119,7 @@ func SetPlayerPunishment(force bool, from, to PunishPlayerData, level PunishLeve
 	p, err := profile.Count()
 	if !force && p == 0 {
 		noProfile = true
-		log.Printf("[!!!]: %s is has not Profile", to.Name)
+		logrus.Debugf("[Punishment] %s has not Profile", to.Name)
 		return noProfile, offline, false, false, nil
 	}
 
@@ -118,7 +140,7 @@ func SetPlayerPunishment(force bool, from, to PunishPlayerData, level PunishLeve
 
 	//If already Permanently Banned, return Duplicate
 	availableBans, err := GetPlayerPunishment(to.UUID, PBAN, false)
-	log.Printf("[]: PBAN: = %d", len(availableBans))
+	logrus.Debugf("[Punishment] PBAN: = %d", len(availableBans))
 	if len(availableBans) != 0 {
 		return noProfile, offline, true, false, err
 	}
@@ -126,7 +148,7 @@ func SetPlayerPunishment(force bool, from, to PunishPlayerData, level PunishLeve
 	//全処罰で、Expireが来ていないAvailableな奴をすべて取得する
 	//1つでもあればクールダウンを理由でreturn
 	availableTempBan, err := GetPlayerPunishment(to.Name, TBAN, false)
-	log.Printf("[Punishment]: Non Expired punishments: %d", len(availableTempBan))
+	logrus.Debugf("[Punishment] Non Expired Punishments: %d", len(availableTempBan))
 	if level >= TBAN && len(availableTempBan) != 0 {
 		return noProfile, offline, false, true, err
 	}
@@ -143,7 +165,7 @@ func SetPlayerPunishment(force bool, from, to PunishPlayerData, level PunishLeve
 
 	err = punishColl.Insert(&punishData)
 	if err != nil {
-		log.Printf("[!!!]: Failed Punish player: %s", err)
+		logrus.WithError(err).Errorf("[Punish] Failed Punish Player")
 		return noProfile, offline, false, false, err
 	}
 
@@ -152,7 +174,13 @@ func SetPlayerPunishment(force bool, from, to PunishPlayerData, level PunishLeve
 		expireDate = time.Unix(expire/1000, 0).String()
 	}
 
-	log.Printf("[Punishment]: %s -> %s (Level: %s / Reason: %s) %s",
-		from.Name, to.Name, level, reason, expireDate)
+	logrus.WithFields(logrus.Fields{
+		"level":  level,
+		"reason": reason,
+		"expire": expireDate,
+	}).Infof("[Punishment] %s -> %s", from.Name, to.Name)
+
+	//logrus.Infof("[Punishment] %s -> %s (Level: %s / Reason: %s) %s",
+	//	from.Name, to.Name, level, reason, expireDate)
 	return noProfile, offline, false, false, nil
 }

@@ -1,35 +1,53 @@
 package database
 
 import (
-	"log"
-
+	"errors"
 	"time"
 
-	"gopkg.in/mgo.v2"
+	"github.com/sirupsen/logrus"
+
 	"strings"
+
+	"gopkg.in/mgo.v2"
 )
 
 var session *mgo.Session
 
+// NewMongoSession - Connect to MongoDB
 func NewMongoSession(address string) {
 	addresses := strings.Split(address, ",")
-	log.Printf("[MongoDB]: Connecting to: %s...", addresses)
+	logrus.WithFields(logrus.Fields{
+		"servers": addresses,
+	}).Infof("[MongoDB] Connecting...")
 
 	di := &mgo.DialInfo{
-		Addrs:   addresses,
-		Timeout: 5 * time.Second,
+		Addrs:    addresses,
+		FailFast: true,
+		Timeout:  5 * time.Second,
 	}
 
 	s, err := mgo.DialWithInfo(di)
 	if err != nil {
-		log.Fatalf("[!!!]: Error @ during Connecting Mongo: %s", err)
+		logrus.WithError(err).Errorf("[MongoDB] Failed Connection")
+		NewMongoSession(address)
+
+		//session = nil
 		return
 	}
 
-	log.Printf("[MongoDB]: Connected!")
+	//log.Printf("[MongoDB] Connected!")
+	logrus.Printf("[MongoDB] Connected!")
+
 	session = s
 }
 
-func GetMongoSession() *mgo.Session {
-	return session
+/*func (m *mongoSession) GetMongoSession() *mgo.Session {
+	return m.mSession
+}*/
+func GetMongoSession() (*mgo.Session, error) {
+	if session == nil {
+		return nil, errors.New("mongo session is not establish")
+	}
+
+	return session, nil
 }

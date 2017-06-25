@@ -1,14 +1,16 @@
 package database
 
 import (
-	"log"
 	"strings"
 	"time"
 
-	"gopkg.in/mgo.v2/bson"
+	"github.com/sirupsen/logrus"
+
 	"gitlab.com/Startail/Systera-API/util"
+	"gopkg.in/mgo.v2/bson"
 )
 
+// PlayerData - PlayerProfile on Database
 type PlayerData struct {
 	ID                 bson.ObjectId    `bson:"_id,omitempty"`
 	UUID               string           `bson:"uuid" json:"id"`
@@ -22,34 +24,46 @@ type PlayerData struct {
 	Settings           map[string]bool  `bson:"settings"`
 }
 
+// PlayerStats - Stats in PlayerProfile
 type PlayerStats struct {
 	CurrentServer string `bson:"current_server"`
 	FirstLogin    int64  `bson:"first_login,omitempty"`
 	LastLogin     int64  `bson:"last_login"`
 }
 
+// PlayerSettings - Player Personal Settings
 type PlayerSettings struct {
 	Vanish   bool `bson:"vanish"`
 	Japanize bool `bson:"japanize"`
 }
 
+// UUIDToName - Get Player Name from UUID
 func UUIDToName(uuid string) string {
-	session := GetMongoSession().Copy()
+	if _, err := GetMongoSession(); err != nil {
+		return ""
+	}
+
+	session := session.Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 
 	playerData := PlayerData{}
 	err := coll.Find(bson.M{"uuid": uuid}).One(&playerData)
 	if err != nil {
-		log.Printf("[!!!]: Failed UUIDToName(%s): %s", uuid, err.Error())
+		logrus.WithError(err).Errorf("[Player] Failed UUIDToName(%s)", uuid)
 		return ""
 	}
 
 	return playerData.Name
 }
 
+// NameToUUID - Get UUID from Player Name
 func NameToUUID(name string) (string, error) {
-	session := GetMongoSession().Copy()
+	if _, err := GetMongoSession(); err != nil {
+		return "", err
+	}
+
+	session := session.Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 
@@ -63,6 +77,7 @@ func NameToUUID(name string) (string, error) {
 	return playerData.UUID, nil
 }
 
+// NameToUUIDwithMojang - Get UUID from Mojang API
 func NameToUUIDwithMojang(name string) (string, error) {
 	playerData := PlayerData{}
 	err := util.GetFromJSONAPI("https://api.mojang.com/users/profiles/minecraft/"+name, &playerData)
@@ -73,8 +88,13 @@ func NameToUUIDwithMojang(name string) (string, error) {
 	return playerData.UUID, nil
 }
 
+// CheckHasProfile - Check Profile exists on Database
 func CheckHasProfile(uuidOrName string) (bool, error) {
-	session := GetMongoSession().Copy()
+	if _, err := GetMongoSession(); err != nil {
+		return false, err
+	}
+
+	session := session.Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 
@@ -86,7 +106,7 @@ func CheckHasProfile(uuidOrName string) (bool, error) {
 
 	count, err := coll.Find(bson.M{key: uuidOrName}).Sort("-stats.last_login").Count()
 	if err != nil {
-		log.Printf("[!!!]: Error occurred during CheckHasProfile: %s", err.Error())
+		logrus.WithError(err).Errorf("[Player] Error occurred during CheckHasProfile")
 		return false, err
 	}
 
@@ -97,8 +117,13 @@ func CheckHasProfile(uuidOrName string) (bool, error) {
 	return true, nil
 }
 
+// Find - Find PlayerProfile
 func Find(uuid string) (PlayerData, error) {
-	session := GetMongoSession().Copy()
+	if _, err := GetMongoSession(); err != nil {
+		return PlayerData{}, err
+	}
+
+	session := session.Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 	playerData := PlayerData{}
@@ -107,8 +132,13 @@ func Find(uuid string) (PlayerData, error) {
 	return playerData, err
 }
 
+// FindByName - Find PlayerProfile from Name
 func FindByName(name string) (PlayerData, error) {
-	session := GetMongoSession().Copy()
+	if _, err := GetMongoSession(); err != nil {
+		return PlayerData{}, err
+	}
+
+	session := session.Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 	playerData := PlayerData{}
@@ -118,8 +148,13 @@ func FindByName(name string) (PlayerData, error) {
 	return playerData, err
 }
 
+// InitPlayerProfile - Initialize Player Profile
 func InitPlayerProfile(uuid, name, ipaddress string) (bool, error) {
-	session := GetMongoSession().Copy()
+	if _, err := GetMongoSession(); err != nil {
+		return false, err
+	}
+
+	session := session.Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 
@@ -128,7 +163,7 @@ func InitPlayerProfile(uuid, name, ipaddress string) (bool, error) {
 
 	hasProfile, err := CheckHasProfile(uuid)
 	if err != nil {
-		log.Printf("[!!!]: Profile get failed @ InitPlayerProfile // %s(%s) from %s", name, uuid, ipaddress)
+		logrus.WithError(err).Errorf("[Player] IPP: Failed Failed get profile %s(%s)", name, uuid)
 		return false, err
 	}
 
@@ -156,13 +191,23 @@ func InitPlayerProfile(uuid, name, ipaddress string) (bool, error) {
 	playerData.KnownUsernames[playerData.Name] = nowtime
 	playerData.KnownUsernameLower[playerData.NameLower] = nowtime
 
-	log.Printf("[InitPlayerProfile]: %s(%s) from %s", name, uuid, ipaddress)
+	logrus.WithFields(logrus.Fields{
+		"name":    name,
+		"uuid":    uuid,
+		"address": ipaddress,
+	}).Infof("[Player] InitPlayerProfile")
+
 	coll.Upsert(bson.M{"uuid": uuid}, bson.M{"$set": &playerData})
 	return hasProfile, nil
 }
 
+// SetPlayerServer - Define Player Current Server
 func SetPlayerServer(uuid, server string) error {
-	session := GetMongoSession().Copy()
+	if _, err := GetMongoSession(); err != nil {
+		return err
+	}
+
+	session := session.Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 
@@ -171,35 +216,24 @@ func SetPlayerServer(uuid, server string) error {
 
 	err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"stats.current_server": server}})
 	if err != nil {
-		log.Printf("[!!!]: failed execute SetPlayerServer from MongoDB %s", err)
+		logrus.WithError(err).Errorf("[Player] Failed Execute SetPlayerServer")
 		return err
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"server": server,
+	}).Debugf("[Player] Set Server: %s > %s(%s)", server, playerData.Name, uuid)
 
 	return nil
 }
 
-func RemovePlayerServer(uuid, server string) error {
-	session := GetMongoSession().Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
-
-	playerData := PlayerData{}
-	err := coll.Find(bson.M{"uuid": uuid}).One(&playerData)
-
-	if playerData.Stats.CurrentServer == server {
-		err = coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"stats.current_server": ""}})
-	}
-
-	if err != nil {
-		log.Printf("[!!!]: failed execute RemovePlayerServer from MongoDB %s", err)
-		return err
-	}
-
-	return nil
-}
-
+// PushPlayerSettings - Set Player Settings
 func PushPlayerSettings(uuid, key string, value bool) error {
-	session := GetMongoSession().Copy()
+	if _, err := GetMongoSession(); err != nil {
+		return err
+	}
+
+	session := session.Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 
@@ -208,7 +242,7 @@ func PushPlayerSettings(uuid, key string, value bool) error {
 
 	err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"settings." + key: value}})
 	if err != nil {
-		log.Printf("[!!!]: failed execute PushPlayerSettings from MongoDB: %s", err)
+		logrus.WithError(err).Errorf("[Player] Failed Push Player Settings")
 		return err
 	}
 

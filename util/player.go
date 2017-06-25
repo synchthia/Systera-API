@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
-	"log"
+
+	"github.com/sirupsen/logrus"
 )
 
 var httpClient = &http.Client{Timeout: 5 * time.Second}
 
 func GetFromJSONAPI(url string, target interface{}) error {
-	log.Printf("[MAPI]: Executing Mojang API...")
+	logrus.Debugf("[MAPI] Executing Mojang API...")
 	r, err := httpClient.Get(url)
 	if err != nil {
 		return err

@@ -1,12 +1,13 @@
 package main
 
 import (
-	"io"
-	"log"
 	"net"
 	"os"
 
+	"github.com/sirupsen/logrus"
+
 	"gitlab.com/Startail/Systera-API/database"
+	"gitlab.com/Startail/Systera-API/logger"
 	"gitlab.com/Startail/Systera-API/server"
 )
 
@@ -19,17 +20,11 @@ func startGRPC(port string) error {
 }
 
 func main() {
-	// Enable Logging to file
-	logfile, err := os.OpenFile("server.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		panic("Could not open server.log:" + err.Error())
-	}
-	defer logfile.Close()
-	log.SetOutput(io.MultiWriter(logfile, os.Stdout))
-	log.SetFlags(log.Ldate | log.Ltime)
+	// Init Logger
+	logger.Init()
 
 	// Init
-	log.Printf("[API]: Starting SYSTERA-API Server...")
+	logrus.Printf("[API] Starting SYSTERA-API Server...")
 
 	// MongoDB
 	mongoAddr := os.Getenv("SYSTERA_MONGO_ADDRESS")
@@ -47,9 +42,11 @@ func main() {
 			port = ":17300"
 		}
 
-		log.Printf("[GRPC]: Listening %s", port)
+		msg := logrus.WithField("listen", port)
+		msg.Infof("[GRPC] Listening %s", port)
+
 		if err := startGRPC(port); err != nil {
-			log.Fatalf("[!!!]: gRPC ERROR: %s", err)
+			logrus.Fatalf("[GRPC] gRPC Error: %s", err)
 		}
 	}()
 	<-wait

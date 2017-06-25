@@ -1,9 +1,9 @@
 package server
 
 import (
-	"log"
-	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 
 	"golang.org/x/net/context"
 
@@ -51,76 +51,6 @@ func NewGRPCServer() *grpc.Server {
 
 func (s *grpcServer) Ping(ctx context.Context, e *pb.Empty) (*pb.Empty, error) {
 	return &pb.Empty{}, nil
-}
-
-func (s *grpcServer) ActionStream(r *pb.StreamRequest, as pb.Systera_ActionStreamServer) error {
-	ech := make(chan pb.ActionStreamResponse)
-	s.mu.Lock()
-	s.asrChans[ech] = struct{}{}
-	s.mu.Unlock()
-	log.Printf("[Action/ST]: Added New Watcher: %s (%v)", r.Name, ech)
-	log.Printf("[Action/ST]: -> Currently Watcher: %d", len(s.asrChans))
-
-	defer func() {
-		s.mu.Lock()
-		delete(s.asrChans, ech)
-		s.mu.Unlock()
-		close(ech)
-		log.Printf("[Action/ST]: Deleted Watcher: %v", ech)
-	}()
-
-	for e := range ech {
-		if e.Target != "GLOBAL" && !strings.HasPrefix(e.Target, r.Name) {
-			continue
-		}
-
-		log.Printf("[Action/ST]: Requested (%s / Target: %s) [%s >> %s]", e.Type, e.Target, r.Name, e.Cmd)
-		if e.Type == pb.StreamType_QUIT {
-			return nil
-		}
-
-		err := as.Send(&e)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s *grpcServer) PunishStream(r *pb.StreamRequest, ps pb.Systera_PunishStreamServer) error {
-	ech := make(chan pb.PunishStreamResponse)
-	s.mu.Lock()
-	s.psrChans[ech] = struct{}{}
-	s.mu.Unlock()
-	log.Printf("[Punish/ST]: Added New Watcher: %s", r.Name)
-	log.Printf("[Punish/ST]: -> Currently Watcher: %d", len(s.psrChans))
-
-	defer func() {
-		s.mu.Lock()
-		delete(s.psrChans, ech)
-		s.mu.Unlock()
-		close(ech)
-		log.Printf("[Punish/ST]: Deleted Watcher: %v", ech)
-	}()
-
-	for e := range ech {
-		if e.Target != "GLOBAL" && !strings.HasPrefix(e.Target, r.Name) {
-			continue
-		}
-
-		log.Printf("[Punish/ST]: Requested (%s / Target: %s) [%s]", e.Type, e.Target, r.Name)
-		if e.Type == pb.StreamType_QUIT {
-			return nil
-		}
-
-		err := ps.Send(&e)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (s *grpcServer) Announce(ctx context.Context, e *pb.AnnounceRequest) (*pb.Empty, error) {
@@ -198,7 +128,7 @@ func (s *grpcServer) GetPlayerPunish(ctx context.Context, e *pb.GetPlayerPunishR
 
 	var punishEntry []*pb.PunishEntry
 	for _, entry := range entries {
-		log.Printf("To: %s / Level: %s / Reason: %s", entry.PunishedTo.Name, pb.PunishLevel(entry.Level), entry.Reason)
+		logrus.Debugf("To: %s / Level: %s / Reason: %s", entry.PunishedTo.Name, pb.PunishLevel(entry.Level), entry.Reason)
 		punishEntry = append(punishEntry, &pb.PunishEntry{
 			Available: entry.Available,
 			Level:     pb.PunishLevel(entry.Level),
@@ -221,7 +151,6 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 
 	serverName := playerData.Stats.CurrentServer
 
-
 	if e.Force && entry.PunishedTo.UUID == "" {
 		targetUUID, err := database.NameToUUIDwithMojang(entry.PunishedTo.Name)
 		if err != nil {
@@ -243,7 +172,7 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 	noProfile, offline, duplicate, coolDown, err := database.SetPlayerPunishment(e.Force, from, to, level, entry.Reason, entry.Date, entry.Expire)
 
 	if e.Remote && !noProfile && !offline && !duplicate && !coolDown && err == nil {
-		log.Printf("DISPATCH: " + playerData.Name)
+		logrus.Debugf("DISPATCH: " + playerData.Name)
 		// DISPATCH target
 		s.mu.Lock()
 		defer s.mu.Unlock()
