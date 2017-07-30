@@ -23,8 +23,8 @@ before_script:
 
   # Setup Go
   - apk --update add git wget ca-certificates tar
-  - wget https://storage.googleapis.com/golang/go1.8.1.linux-amd64.tar.gz
-  - tar -vC /usr/local -xzf go1.8.1.linux-amd64.tar.gz
+  - wget https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz
+  - tar -vC /usr/local -xzf go1.8.3.linux-amd64.tar.gz
   - mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
   - export PATH=$PATH:/usr/local/go/bin
 
