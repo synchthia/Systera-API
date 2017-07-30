@@ -29,7 +29,7 @@ func main() {
 	// MongoDB
 	mongoAddr := os.Getenv("SYSTERA_MONGO_ADDRESS")
 	if len(mongoAddr) == 0 {
-		mongoAddr = "192.168.99.100:27017"
+		mongoAddr = "localhost:27017"
 	}
 	database.NewMongoSession(mongoAddr)
 
