@@ -2,46 +2,43 @@ image: alpine:latest
 services:
   - docker:dind
 
-cache:
-  untracked: true
-  key: "golang"
-  paths:
-    - /go
-    - /lib
-    - /lib64
-
 variables:
   GOPATH: "/go"
-  PROJECT_PATH: "/go/src/gitlab.com/Startail/Systera-API"
 
 stages:
- - build_image
+  - build_app
+  - build_image
 
-before_script:
-  # Define Build Path
-  - export CURRENT_BUILD_PATH=$(pwd)
+build-app:
+  stage: build_app
+  artifacts:
+    paths:
+    - systera
 
-  # Setup Go
-  - apk --no-cache add git wget ca-certificates tar
-  - wget https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz
-  - tar -vC /usr/local -xzf go1.8.3.linux-amd64.tar.gz
+  script:
+  # Install Apps
+  - apk --no-cache add git openssl
+
+  # Install Golang
+  - wget https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz
+  - echo "Extracting golang..." && tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz
   - mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
   - export PATH=$PATH:/usr/local/go/bin
+  - mkdir -p /go/src
 
-  # Mkdir GOPATH/Directory
-  - mkdir -p $PROJECT_PATH
-  - cp -Rfv $CURRENT_BUILD_PATH $PROJECT_PATH/..
+  # Symlink
+  - ln -s /builds /go/src/gitlab.com
 
   # Build
-  - cd $PROJECT_PATH/cmd/api-server
+  - cd /go/src/gitlab.com/${CI_PROJECT_PATH}/cmd/systera
   - go get -v
-  - cd $PROJECT_PATH
-  - go build cmd/api-server/main.go
+  - cd /go/src/gitlab.com/${CI_PROJECT_PATH}
+  - go build -o systera ./cmd/systera/main.go
 
 build-image:
   image: docker:latest
   stage: build_image
   script:
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-    - docker build -t registry.gitlab.com/startail/systera-api .
-    - docker push registry.gitlab.com/startail/systera-api
+  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+  - docker build -t registry.gitlab.com/startail/systera-api .
+  - docker push registry.gitlab.com/startail/systera-api
