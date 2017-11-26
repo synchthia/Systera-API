@@ -45,17 +45,19 @@ message QuitStreamRequest { string name = 1; }
 /*
  * PLAYER PROFILE
  */
-message InitPlayerProfileRequest { string playerUUID = 1; string playerName = 2; string playerIPAddress = 3; }
-message InitPlayerProfileResponse { bool hasProfile = 1; }
-
-message FetchPlayerProfileRequest { string playerUUID = 1; }
-message FetchPlayerProfileByNameRequest { string playerName = 1; }
-message FetchPlayerProfileResponse {
+message PlayerEntry {
   string playerUUID = 1;
   string playerName = 2;
   repeated string groups = 3;
   map<string, bool> settings = 4;
 }
+
+message InitPlayerProfileRequest { string playerUUID = 1; string playerName = 2; string playerIPAddress = 3; }
+message InitPlayerProfileResponse { bool hasProfile = 1; }
+
+message FetchPlayerProfileRequest { string playerUUID = 1; }
+message FetchPlayerProfileByNameRequest { string playerName = 1; }
+message FetchPlayerProfileResponse { PlayerEntry entry = 1; }
 
 message SetPlayerServerRequest { string playerUUID = 1; string serverName = 2; }
 message RemovePlayerServerRequest { string playerUUID = 1; string serverName = 2; }

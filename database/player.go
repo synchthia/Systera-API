@@ -21,7 +21,7 @@ type PlayerData struct {
 	KnownUsernames     map[string]int64 `bson:"known_usernames"`
 	KnownUsernameLower map[string]int64 `bson:"known_usernames_lower"`
 	KnownAddresses     map[string]int64 `bson:"known_addresses"`
-	Settings           map[string]bool  `bson:"settings"`
+	Settings           PlayerSettings   `bson:"settings"`
 }
 
 // PlayerStats - Stats in PlayerProfile
@@ -33,8 +33,8 @@ type PlayerStats struct {
 
 // PlayerSettings - Player Personal Settings
 type PlayerSettings struct {
-	Vanish   bool `bson:"vanish"`
-	Japanize bool `bson:"japanize"`
+	Vanish   bool `bson:"vanish" json:"vanish"`
+	Japanize bool `bson:"japanize" json:"japanize"`
 }
 
 // UUIDToName - Get Player Name from UUID
@@ -237,14 +237,20 @@ func PushPlayerSettings(uuid, key string, value bool) error {
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 
-	playerData := PlayerData{}
-	coll.Find(bson.M{"uuid": uuid}).One(&playerData)
-
-	err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"settings." + key: value}})
+	_, err := coll.Upsert(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"settings." + key: value}})
 	if err != nil {
 		logrus.WithError(err).Errorf("[Player] Failed Push Player Settings")
 		return err
 	}
+
+	//playerData := PlayerData{}
+	//coll.Find(bson.M{"uuid": uuid}).One(&playerData)
+
+	/*err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"settings." + key: value}})
+	if err != nil {
+		logrus.WithError(err).Errorf("[Player] Failed Push Player Settings")
+		return err
+	}*/
 
 	return nil
 }

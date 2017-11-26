@@ -9,6 +9,7 @@ import (
 
 	pb "gitlab.com/Startail/Systera-API/apipb"
 	"gitlab.com/Startail/Systera-API/database"
+	"gitlab.com/Startail/Systera-API/util"
 	"google.golang.org/grpc"
 )
 
@@ -85,20 +86,14 @@ func (s *grpcServer) InitPlayerProfile(ctx context.Context, e *pb.InitPlayerProf
 func (s *grpcServer) FetchPlayerProfile(ctx context.Context, e *pb.FetchPlayerProfileRequest) (*pb.FetchPlayerProfileResponse, error) {
 	playerData, err := database.Find(e.PlayerUUID)
 	return &pb.FetchPlayerProfileResponse{
-		PlayerUUID: playerData.UUID,
-		PlayerName: playerData.Name,
-		Groups:     playerData.Groups,
-		Settings:   playerData.Settings,
+		Entry: s.PlayerData_DBtoPB(playerData),
 	}, err
 }
 
 func (s *grpcServer) FetchPlayerProfileByName(ctx context.Context, e *pb.FetchPlayerProfileByNameRequest) (*pb.FetchPlayerProfileResponse, error) {
 	playerData, err := database.FindByName(e.PlayerName)
 	return &pb.FetchPlayerProfileResponse{
-		PlayerUUID: playerData.UUID,
-		PlayerName: playerData.Name,
-		Groups:     playerData.Groups,
-		Settings:   playerData.Settings,
+		Entry: s.PlayerData_DBtoPB(playerData),
 	}, err
 }
 
@@ -197,4 +192,13 @@ func (s *grpcServer) FetchGroups(ctx context.Context, e *pb.FetchGroupsRequest) 
 		})
 	}
 	return &pb.FetchGroupsResponse{Groups: allGroups}, err
+}
+
+func (s *grpcServer) PlayerData_DBtoPB(dbEntry database.PlayerData) *pb.PlayerEntry {
+	return &pb.PlayerEntry{
+		PlayerUUID: dbEntry.UUID,
+		PlayerName: dbEntry.Name,
+		Groups:     dbEntry.Groups,
+		Settings:   util.StructToBoolMap(dbEntry.Settings),
+	}
 }
