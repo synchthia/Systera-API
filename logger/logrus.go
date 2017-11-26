@@ -9,7 +9,7 @@ import (
 
 // Init - InitLogging
 func Init() {
-	debug := os.Getenv("SYSTERA_API_DEBUG")
+	debug := os.Getenv("DEBUG")
 	if len(debug) == 0 {
 		// PRODUCTION
 		logrus.SetFormatter(&logrus.JSONFormatter{
