@@ -12,23 +12,23 @@ message PlayerData { string UUID = 1; string name = 2; }
  */
 service Systera {
   rpc Ping(Empty) returns (Empty) {}
-  rpc ActionStream (StreamRequest) returns (stream ActionStreamResponse) {}
-  rpc PunishStream (StreamRequest) returns (stream PunishStreamResponse) {}
+  rpc ActionStream(StreamRequest) returns (stream ActionStreamResponse) {}
+  rpc PunishStream(StreamRequest) returns (stream PunishStreamResponse) {}
   rpc Announce(AnnounceRequest) returns (Empty) {}
   rpc QuitStream(QuitStreamRequest) returns (Empty) {}
 
-  rpc InitPlayerProfile (InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
-  rpc FetchPlayerProfile (FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
-  rpc FetchPlayerProfileByName (FetchPlayerProfileByNameRequest) returns (FetchPlayerProfileResponse) {}
+  rpc InitPlayerProfile(InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
+  rpc FetchPlayerProfile(FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
+  rpc FetchPlayerProfileByName(FetchPlayerProfileByNameRequest) returns (FetchPlayerProfileResponse) {}
 
-  rpc SetPlayerServer (SetPlayerServerRequest) returns (Empty);
-  rpc RemovePlayerServer (RemovePlayerServerRequest) returns (Empty);
-  rpc SetPlayerSettings (SetPlayerSettingsRequest) returns (Empty);
+  rpc SetPlayerServer(SetPlayerServerRequest) returns (Empty);
+  rpc RemovePlayerServer(RemovePlayerServerRequest) returns (Empty);
+  rpc SetPlayerSettings(SetPlayerSettingsRequest) returns (Empty);
 
-  rpc GetPlayerPunish (GetPlayerPunishRequest) returns (GetPlayerPunishResponse) {}
-  rpc SetPlayerPunish (SetPlayerPunishRequest) returns (SetPlayerPunishResponse) {}
+  rpc GetPlayerPunish(GetPlayerPunishRequest) returns (GetPlayerPunishResponse) {}
+  rpc SetPlayerPunish(SetPlayerPunishRequest) returns (SetPlayerPunishResponse) {}
 
-  rpc FetchGroups (FetchGroupsRequest) returns (FetchGroupsResponse) {}
+  rpc FetchGroups(FetchGroupsRequest) returns (FetchGroupsResponse) {}
 }
 
 /*
@@ -52,7 +52,7 @@ message PlayerEntry {
   map<string, bool> settings = 4;
 }
 
-message InitPlayerProfileRequest { string playerUUID = 1; string playerName = 2; string playerIPAddress = 3; }
+message InitPlayerProfileRequest { string playerUUID = 1; string playerName = 2; string playerIPAddress = 3; string playerHostname = 4; }
 message InitPlayerProfileResponse { bool hasProfile = 1; }
 
 message FetchPlayerProfileRequest { string playerUUID = 1; }

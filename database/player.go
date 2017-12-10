@@ -12,22 +12,22 @@ import (
 
 // PlayerData - PlayerProfile on Database
 type PlayerData struct {
-	ID                 bson.ObjectId    `bson:"_id,omitempty"`
-	UUID               string           `bson:"uuid" json:"id"`
-	Name               string           `bson:"name"`
-	NameLower          string           `bson:"name_lower"`
-	Groups             []string         `bson:"groups"`
-	Stats              PlayerStats      `bson:"stats"`
-	KnownUsernames     map[string]int64 `bson:"known_usernames"`
-	KnownUsernameLower map[string]int64 `bson:"known_usernames_lower"`
-	KnownAddresses     map[string]int64 `bson:"known_addresses"`
-	Settings           PlayerSettings   `bson:"settings"`
+	ID                 bson.ObjectId              `bson:"_id,omitempty"`
+	UUID               string                     `bson:"uuid" json:"id"`
+	Name               string                     `bson:"name"`
+	NameLower          string                     `bson:"name_lower"`
+	Groups             []string                   `bson:"groups"`
+	Stats              PlayerStats                `bson:"stats"`
+	KnownUsernames     map[string]int64           `bson:"known_usernames"`
+	KnownUsernameLower map[string]int64           `bson:"known_usernames_lower"`
+	KnownAddresses     map[string]PlayerAddresses `bson:"known_addresses"`
+	Settings           PlayerSettings             `bson:"settings"`
 }
 
 // PlayerStats - Stats in PlayerProfile
 type PlayerStats struct {
 	CurrentServer string `bson:"current_server"`
-	FirstLogin    int64  `bson:"first_login,omitempty"`
+	FirstLogin    int64  `bson:"first_login"`
 	LastLogin     int64  `bson:"last_login"`
 }
 
@@ -35,6 +35,13 @@ type PlayerStats struct {
 type PlayerSettings struct {
 	Vanish   bool `bson:"vanish" json:"vanish"`
 	Japanize bool `bson:"japanize" json:"japanize"`
+}
+
+// PlayerAddresses - Player Address Entries
+type PlayerAddresses struct {
+	Address  string `bson:"address"`
+	Hostname string `bson:"hostname"`
+	Date     int64  `bson:"date"`
 }
 
 // UUIDToName - Get Player Name from UUID
@@ -88,35 +95,6 @@ func NameToUUIDwithMojang(name string) (string, error) {
 	return playerData.UUID, nil
 }
 
-// CheckHasProfile - Check Profile exists on Database
-func CheckHasProfile(uuidOrName string) (bool, error) {
-	if _, err := GetMongoSession(); err != nil {
-		return false, err
-	}
-
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
-
-	key := "uuid"
-	uuidOrName = strings.ToLower(uuidOrName)
-	if len(uuidOrName) != 32 {
-		key = "name_lower"
-	}
-
-	count, err := coll.Find(bson.M{key: uuidOrName}).Sort("-stats.last_login").Count()
-	if err != nil {
-		logrus.WithError(err).Errorf("[Player] Error occurred during CheckHasProfile")
-		return false, err
-	}
-
-	if count == 0 {
-		return false, nil
-	}
-
-	return true, nil
-}
-
 // Find - Find PlayerProfile
 func Find(uuid string) (PlayerData, error) {
 	if _, err := GetMongoSession(); err != nil {
@@ -149,9 +127,9 @@ func FindByName(name string) (PlayerData, error) {
 }
 
 // InitPlayerProfile - Initialize Player Profile
-func InitPlayerProfile(uuid, name, ipaddress string) (bool, error) {
+func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
 	if _, err := GetMongoSession(); err != nil {
-		return false, err
+		return 0, err
 	}
 
 	session := session.Copy()
@@ -159,46 +137,50 @@ func InitPlayerProfile(uuid, name, ipaddress string) (bool, error) {
 	coll := session.DB("systera").C("players")
 
 	nowtime := time.Now().UnixNano() / int64(time.Millisecond)
-	playerData := PlayerData{}
 
-	hasProfile, err := CheckHasProfile(uuid)
+	profileCnt, err := coll.Find(bson.M{"uuid": uuid}).Count()
 	if err != nil {
 		logrus.WithError(err).Errorf("[Player] IPP: Failed Failed get profile %s(%s)", name, uuid)
-		return false, err
+		return 0, err
 	}
 
-	if !hasProfile {
-		// First
-		playerData.UUID = uuid
-		playerData.Name = name
-		playerData.NameLower = strings.ToLower(playerData.Name)
-		playerData.Stats.FirstLogin = nowtime
-		playerData.Stats.LastLogin = nowtime
-	} else {
-		// Not First
-		coll.Find(bson.M{"uuid": uuid}).One(&playerData)
-		playerData.Stats.LastLogin = nowtime
-	}
+	playerData := PlayerData{}
 
-	if playerData.KnownAddresses == nil {
-		playerData.KnownAddresses = make(map[string]int64)
-	}
-	if playerData.KnownUsernames == nil {
+	if profileCnt == 0 {
+		// Initialize
 		playerData.KnownUsernames = make(map[string]int64)
 		playerData.KnownUsernameLower = make(map[string]int64)
+		playerData.KnownAddresses = make(map[string]PlayerAddresses)
+
+		playerData.Stats.FirstLogin = nowtime
+	} else {
+		coll.Find(bson.M{"uuid": uuid}).One(&playerData)
 	}
-	playerData.KnownAddresses[strings.NewReplacer(".", "_").Replace(ipaddress)] = nowtime
-	playerData.KnownUsernames[playerData.Name] = nowtime
-	playerData.KnownUsernameLower[playerData.NameLower] = nowtime
+
+	// User Profile
+	playerData.UUID = uuid
+	playerData.Name = name
+	playerData.NameLower = strings.ToLower(name)
+	playerData.Stats.LastLogin = nowtime
+
+	// User Log (Address / Name)
+	playerData.KnownAddresses[strings.NewReplacer(".", "_").Replace(ipAddress)] = PlayerAddresses{
+		Address:  ipAddress,
+		Hostname: hostname,
+		Date:     nowtime,
+	}
+	playerData.KnownUsernames[name] = nowtime
+	playerData.KnownUsernameLower[strings.ToLower(name)] = nowtime
+
+	coll.Upsert(bson.M{"uuid": uuid}, playerData)
 
 	logrus.WithFields(logrus.Fields{
 		"name":    name,
 		"uuid":    uuid,
-		"address": ipaddress,
+		"address": ipAddress,
 	}).Infof("[Player] InitPlayerProfile")
 
-	coll.Upsert(bson.M{"uuid": uuid}, bson.M{"$set": &playerData})
-	return hasProfile, nil
+	return profileCnt, nil
 }
 
 // SetPlayerServer - Define Player Current Server
@@ -242,15 +224,6 @@ func PushPlayerSettings(uuid, key string, value bool) error {
 		logrus.WithError(err).Errorf("[Player] Failed Push Player Settings")
 		return err
 	}
-
-	//playerData := PlayerData{}
-	//coll.Find(bson.M{"uuid": uuid}).One(&playerData)
-
-	/*err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"settings." + key: value}})
-	if err != nil {
-		logrus.WithError(err).Errorf("[Player] Failed Push Player Settings")
-		return err
-	}*/
 
 	return nil
 }

@@ -17,7 +17,7 @@ type Server interface {
 	Announce(target, msg string)
 	QuitStream(name string)
 
-	InitPlayerProfile(playerUUID, playerName, ipAddress string) (bool, error)
+	InitPlayerProfile(playerUUID, playerName, ipAddress, hostname string) (bool, error)
 	FetchPlayerProfile(playerUUID string) (string, string, map[string]bool, error)
 	FetchPlayerProfileByName(playerName string) (string, string, map[string]bool, error)
 
@@ -79,8 +79,13 @@ func (s *grpcServer) QuitStream(ctx context.Context, e *pb.QuitStreamRequest) (*
 }
 
 func (s *grpcServer) InitPlayerProfile(ctx context.Context, e *pb.InitPlayerProfileRequest) (*pb.InitPlayerProfileResponse, error) {
-	h, err := database.InitPlayerProfile(e.PlayerUUID, e.PlayerName, e.PlayerIPAddress)
-	return &pb.InitPlayerProfileResponse{HasProfile: h}, err
+	hasProfile := false
+	count, err := database.InitPlayerProfile(e.PlayerUUID, e.PlayerName, e.PlayerIPAddress, e.PlayerHostname)
+
+	if count != 0 {
+		hasProfile = true
+	}
+	return &pb.InitPlayerProfileResponse{HasProfile: hasProfile}, err
 }
 
 func (s *grpcServer) FetchPlayerProfile(ctx context.Context, e *pb.FetchPlayerProfileRequest) (*pb.FetchPlayerProfileResponse, error) {

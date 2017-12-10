@@ -1,6 +1,8 @@
 package database
 
 import (
+	"errors"
+
 	"github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -39,4 +41,32 @@ func FindGroupData() ([]GroupData, error) {
 	}
 
 	return groups, nil
+}
+
+// AddGroup - Create New Group
+func AddGroup(name string, prefix string) error {
+	if _, err := GetMongoSession(); err != nil {
+		return err
+	}
+
+	session := session.Copy()
+	defer session.Close()
+	coll := session.DB("systera").C("groups")
+
+	groupLen, findErr := coll.Find(bson.M{"name": name}).Count()
+	if groupLen != 0 {
+		return errors.New("group already exists")
+	}
+	if findErr != nil {
+		return findErr
+	}
+
+	group := GroupData{
+		Name:   name,
+		Prefix: prefix,
+	}
+
+	err := coll.Insert(&group)
+
+	return err
 }

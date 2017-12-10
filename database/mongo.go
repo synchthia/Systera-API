@@ -37,7 +37,6 @@ func NewMongoSession(address string) {
 
 	//log.Printf("[MongoDB] Connected!")
 	logrus.Printf("[MongoDB] Connected!")
-
 	session = s
 }
 
