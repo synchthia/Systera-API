@@ -183,6 +183,25 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
 	return profileCnt, nil
 }
 
+// SetPlayerGroups - Define Player Groups
+func SetPlayerGroups(uuid string, groups []string) error {
+	if _, err := GetMongoSession(); err != nil {
+		return err
+	}
+
+	session := session.Copy()
+	defer session.Close()
+	coll := session.DB("systera").C("players")
+
+	err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"groups": groups}})
+	if err != nil {
+		logrus.WithError(err).Errorf("[Player] Failed Execute SetPlayerGroups")
+		return err
+	}
+
+	return nil
+}
+
 // SetPlayerServer - Define Player Current Server
 func SetPlayerServer(uuid, server string) error {
 	if _, err := GetMongoSession(); err != nil {

@@ -11,24 +11,26 @@ message PlayerData { string UUID = 1; string name = 2; }
  * Systera API
  */
 service Systera {
-  rpc Ping(Empty) returns (Empty) {}
-  rpc ActionStream(StreamRequest) returns (stream ActionStreamResponse) {}
-  rpc PunishStream(StreamRequest) returns (stream PunishStreamResponse) {}
-  rpc Announce(AnnounceRequest) returns (Empty) {}
-  rpc QuitStream(QuitStreamRequest) returns (Empty) {}
+    rpc Ping(Empty) returns (Empty) {}
+    rpc ActionStream(StreamRequest) returns (stream ActionStreamResponse) {}
+    rpc PlayerStream(StreamRequest) returns (stream PlayerStreamResponse) {}
+    rpc PunishStream(StreamRequest) returns (stream PunishStreamResponse) {}
+    rpc Announce(AnnounceRequest) returns (Empty) {}
+    rpc QuitStream(QuitStreamRequest) returns (Empty) {}
 
-  rpc InitPlayerProfile(InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
-  rpc FetchPlayerProfile(FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
-  rpc FetchPlayerProfileByName(FetchPlayerProfileByNameRequest) returns (FetchPlayerProfileResponse) {}
+    rpc InitPlayerProfile(InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
+    rpc FetchPlayerProfile(FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
+    rpc FetchPlayerProfileByName(FetchPlayerProfileByNameRequest) returns (FetchPlayerProfileResponse) {}
 
-  rpc SetPlayerServer(SetPlayerServerRequest) returns (Empty);
-  rpc RemovePlayerServer(RemovePlayerServerRequest) returns (Empty);
-  rpc SetPlayerSettings(SetPlayerSettingsRequest) returns (Empty);
+    rpc SetPlayerGroups(SetPlayerGroupsRequest) returns (Empty);
+    rpc SetPlayerServer(SetPlayerServerRequest) returns (Empty);
+    rpc RemovePlayerServer(RemovePlayerServerRequest) returns (Empty);
+    rpc SetPlayerSettings(SetPlayerSettingsRequest) returns (Empty);
 
-  rpc GetPlayerPunish(GetPlayerPunishRequest) returns (GetPlayerPunishResponse) {}
-  rpc SetPlayerPunish(SetPlayerPunishRequest) returns (SetPlayerPunishResponse) {}
+    rpc GetPlayerPunish(GetPlayerPunishRequest) returns (GetPlayerPunishResponse) {}
+    rpc SetPlayerPunish(SetPlayerPunishRequest) returns (SetPlayerPunishResponse) {}
 
-  rpc FetchGroups(FetchGroupsRequest) returns (FetchGroupsResponse) {}
+    rpc FetchGroups(FetchGroupsRequest) returns (FetchGroupsResponse) {}
 }
 
 /*
@@ -39,6 +41,9 @@ message StreamRequest { string name = 1; StreamType type = 2; }
 message ActionStreamResponse { StreamType type = 1; string target = 2; string cmd = 3; }
 message PunishStreamResponse { StreamType type = 1; string target = 2; PunishEntry entry = 3; }
 
+enum PlayerSyncType { GROUPS = 0; SETTINGS = 1; }
+message PlayerStreamResponse { StreamType type = 1; string target = 2; PlayerSyncType syncType = 3; PlayerEntry entry = 4; }
+
 message AnnounceRequest { string target = 1; string message = 2; }
 message QuitStreamRequest { string name = 1; }
 
@@ -46,10 +51,10 @@ message QuitStreamRequest { string name = 1; }
  * PLAYER PROFILE
  */
 message PlayerEntry {
-  string playerUUID = 1;
-  string playerName = 2;
-  repeated string groups = 3;
-  map<string, bool> settings = 4;
+    string playerUUID = 1;
+    string playerName = 2;
+    repeated string groups = 3;
+    map<string, bool> settings = 4;
 }
 
 message InitPlayerProfileRequest { string playerUUID = 1; string playerName = 2; string playerIPAddress = 3; string playerHostname = 4; }
@@ -58,6 +63,8 @@ message InitPlayerProfileResponse { bool hasProfile = 1; }
 message FetchPlayerProfileRequest { string playerUUID = 1; }
 message FetchPlayerProfileByNameRequest { string playerName = 1; }
 message FetchPlayerProfileResponse { PlayerEntry entry = 1; }
+
+message SetPlayerGroupsRequest { string playerUUID = 1; repeated string groups = 2; }
 
 message SetPlayerServerRequest { string playerUUID = 1; string serverName = 2; }
 message RemovePlayerServerRequest { string playerUUID = 1; string serverName = 2; }

@@ -4,17 +4,36 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
 
 	pb "gitlab.com/Startail/Systera-API/apipb"
 )
 
+func (s *grpcServer) QuitStream(ctx context.Context, e *pb.QuitStreamRequest) (*pb.Empty, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for c := range s.actionChans {
+		c <- pb.ActionStreamResponse{Type: pb.StreamType_QUIT, Target: e.Name}
+	}
+
+	for c := range s.playerChans {
+		c <- pb.PlayerStreamResponse{Type: pb.StreamType_QUIT, Target: e.Name}
+	}
+
+	for c := range s.punishChans {
+		c <- pb.PunishStreamResponse{Type: pb.StreamType_QUIT, Target: e.Name}
+	}
+	return &pb.Empty{}, nil
+}
+
 func (s *grpcServer) ActionStream(r *pb.StreamRequest, as pb.Systera_ActionStreamServer) error {
 	ech := make(chan pb.ActionStreamResponse)
 	s.mu.Lock()
-	s.asrChans[ech] = struct{}{}
+	s.actionChans[ech] = struct{}{}
 	s.mu.Unlock()
 
-	clientLen := len(s.asrChans)
+	clientLen := len(s.actionChans)
 
 	logrus.WithFields(logrus.Fields{
 		"from":    r.Name,
@@ -23,7 +42,7 @@ func (s *grpcServer) ActionStream(r *pb.StreamRequest, as pb.Systera_ActionStrea
 
 	defer func() {
 		s.mu.Lock()
-		delete(s.asrChans, ech)
+		delete(s.actionChans, ech)
 		s.mu.Unlock()
 		close(ech)
 		logrus.WithFields(logrus.Fields{
@@ -56,13 +75,61 @@ func (s *grpcServer) ActionStream(r *pb.StreamRequest, as pb.Systera_ActionStrea
 	return nil
 }
 
+func (s *grpcServer) PlayerStream(r *pb.StreamRequest, ps pb.Systera_PlayerStreamServer) error {
+	ech := make(chan pb.PlayerStreamResponse)
+	s.mu.Lock()
+	s.playerChans[ech] = struct{}{}
+	s.mu.Unlock()
+
+	clientLen := len(s.playerChans)
+
+	logrus.WithFields(logrus.Fields{
+		"from":    r.Name,
+		"clients": clientLen,
+	}).Infof("[PLAYER] [>] Connect > %s", r.Name)
+
+	defer func() {
+		s.mu.Lock()
+		delete(s.playerChans, ech)
+		s.mu.Unlock()
+		close(ech)
+		logrus.WithFields(logrus.Fields{
+			"from":    r.Name,
+			"clients": clientLen,
+		}).Infof("[PLAYER] [x] CLOSED > %s", r.Name)
+	}()
+
+	for e := range ech {
+		if e.Target != "GLOBAL" && !strings.HasPrefix(e.Target, r.Name) {
+			continue
+		}
+
+		if e.Type == pb.StreamType_QUIT {
+			return nil
+		}
+
+		logrus.WithFields(logrus.Fields{
+			"type":   e.Type,
+			"from":   r.Name,
+			"target": e.Target,
+		}).Infof("[PLAYER] [<->] %s > %s", e.Type, e.Target)
+
+		err := ps.Send(&e)
+		if err != nil {
+			logrus.WithError(err).Errorf("[gRPC]")
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *grpcServer) PunishStream(r *pb.StreamRequest, ps pb.Systera_PunishStreamServer) error {
 	ech := make(chan pb.PunishStreamResponse)
 	s.mu.Lock()
-	s.psrChans[ech] = struct{}{}
+	s.punishChans[ech] = struct{}{}
 	s.mu.Unlock()
 
-	clientLen := len(s.psrChans)
+	clientLen := len(s.punishChans)
 
 	logrus.WithFields(logrus.Fields{
 		"from":    r.Name,
@@ -71,7 +138,7 @@ func (s *grpcServer) PunishStream(r *pb.StreamRequest, ps pb.Systera_PunishStrea
 
 	defer func() {
 		s.mu.Lock()
-		delete(s.psrChans, ech)
+		delete(s.punishChans, ech)
 		s.mu.Unlock()
 		close(ech)
 		logrus.WithFields(logrus.Fields{

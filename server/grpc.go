@@ -21,6 +21,7 @@ type Server interface {
 	FetchPlayerProfile(playerUUID string) (string, string, map[string]bool, error)
 	FetchPlayerProfileByName(playerName string) (string, string, map[string]bool, error)
 
+	SetPlayerGroups(playerUUID string, groups []string) error
 	SetPlayerServer(playerUUID, serverName string) error
 	SetPlayerSettings(playerUUID, key string, value bool) error
 
@@ -31,16 +32,18 @@ type Server interface {
 }
 
 type grpcServer struct {
-	server   Server
-	mu       sync.RWMutex
-	asrChans map[chan pb.ActionStreamResponse]struct{}
-	psrChans map[chan pb.PunishStreamResponse]struct{}
+	server      Server
+	mu          sync.RWMutex
+	actionChans map[chan pb.ActionStreamResponse]struct{}
+	playerChans map[chan pb.PlayerStreamResponse]struct{}
+	punishChans map[chan pb.PunishStreamResponse]struct{}
 }
 
 func NewServer() *grpcServer {
 	return &grpcServer{
-		asrChans: make(map[chan pb.ActionStreamResponse]struct{}),
-		psrChans: make(map[chan pb.PunishStreamResponse]struct{}),
+		actionChans: make(map[chan pb.ActionStreamResponse]struct{}),
+		playerChans: make(map[chan pb.PlayerStreamResponse]struct{}),
+		punishChans: make(map[chan pb.PunishStreamResponse]struct{}),
 	}
 }
 
@@ -58,22 +61,8 @@ func (s *grpcServer) Announce(ctx context.Context, e *pb.AnnounceRequest) (*pb.E
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for c := range s.asrChans {
+	for c := range s.actionChans {
 		c <- pb.ActionStreamResponse{Type: pb.StreamType_DISPATCH, Target: e.Target, Cmd: e.Message}
-	}
-	return &pb.Empty{}, nil
-}
-
-func (s *grpcServer) QuitStream(ctx context.Context, e *pb.QuitStreamRequest) (*pb.Empty, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for c := range s.asrChans {
-		c <- pb.ActionStreamResponse{Type: pb.StreamType_QUIT, Target: e.Name}
-	}
-
-	for c := range s.psrChans {
-		c <- pb.PunishStreamResponse{Type: pb.StreamType_QUIT, Target: e.Name}
 	}
 	return &pb.Empty{}, nil
 }
@@ -100,6 +89,31 @@ func (s *grpcServer) FetchPlayerProfileByName(ctx context.Context, e *pb.FetchPl
 	return &pb.FetchPlayerProfileResponse{
 		Entry: s.PlayerData_DBtoPB(playerData),
 	}, err
+}
+
+func (s *grpcServer) SetPlayerGroups(ctx context.Context, e *pb.SetPlayerGroupsRequest) (*pb.Empty, error) {
+	err := database.SetPlayerGroups(e.PlayerUUID, e.Groups)
+	playerData, err := database.Find(e.PlayerUUID)
+
+	if err != nil {
+		return &pb.Empty{}, err
+	}
+
+	if playerData.Stats.CurrentServer != "" {
+		for c := range s.playerChans {
+			c <- pb.PlayerStreamResponse{
+				Type:     pb.StreamType_DISPATCH,
+				Target:   playerData.Stats.CurrentServer,
+				SyncType: pb.PlayerSyncType_GROUPS,
+				Entry: &pb.PlayerEntry{
+					PlayerUUID: e.PlayerUUID,
+					Groups:     e.Groups,
+				},
+			}
+		}
+
+	}
+	return &pb.Empty{}, err
 }
 
 func (s *grpcServer) SetPlayerServer(ctx context.Context, e *pb.SetPlayerServerRequest) (*pb.Empty, error) {
@@ -177,7 +191,7 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
-		for c := range s.psrChans {
+		for c := range s.punishChans {
 			c <- pb.PunishStreamResponse{Type: pb.StreamType_DISPATCH, Target: serverName, Entry: entry}
 		}
 	}
