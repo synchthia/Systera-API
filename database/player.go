@@ -163,6 +163,11 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
 	playerData.NameLower = strings.ToLower(name)
 	playerData.Stats.LastLogin = nowtime
 
+	// Player Groups
+	if len(playerData.Groups) == 0 {
+		playerData.Groups = []string{"default"}
+	}
+
 	// User Log (Address / Name)
 	playerData.KnownAddresses[strings.NewReplacer(".", "_").Replace(ipAddress)] = PlayerAddresses{
 		Address:  ipAddress,

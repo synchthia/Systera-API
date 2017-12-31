@@ -9,13 +9,14 @@ import (
 
 	pb "gitlab.com/Startail/Systera-API/apipb"
 	"gitlab.com/Startail/Systera-API/database"
+	"gitlab.com/Startail/Systera-API/stream"
 	"gitlab.com/Startail/Systera-API/util"
 	"google.golang.org/grpc"
 )
 
 type Server interface {
 	Announce(target, msg string)
-	QuitStream(name string)
+	Dispatch(target, cmd string)
 
 	InitPlayerProfile(playerUUID, playerName, ipAddress, hostname string) (bool, error)
 	FetchPlayerProfile(playerUUID string) (string, string, map[string]bool, error)
@@ -32,19 +33,12 @@ type Server interface {
 }
 
 type grpcServer struct {
-	server      Server
-	mu          sync.RWMutex
-	actionChans map[chan pb.ActionStreamResponse]struct{}
-	playerChans map[chan pb.PlayerStreamResponse]struct{}
-	punishChans map[chan pb.PunishStreamResponse]struct{}
+	server Server
+	mu     sync.RWMutex
 }
 
 func NewServer() *grpcServer {
-	return &grpcServer{
-		actionChans: make(map[chan pb.ActionStreamResponse]struct{}),
-		playerChans: make(map[chan pb.PlayerStreamResponse]struct{}),
-		punishChans: make(map[chan pb.PunishStreamResponse]struct{}),
-	}
+	return &grpcServer{}
 }
 
 func NewGRPCServer() *grpc.Server {
@@ -53,18 +47,20 @@ func NewGRPCServer() *grpc.Server {
 	return server
 }
 
-func (s *grpcServer) Ping(ctx context.Context, e *pb.Empty) (*pb.Empty, error) {
-	return &pb.Empty{}, nil
-}
-
 func (s *grpcServer) Announce(ctx context.Context, e *pb.AnnounceRequest) (*pb.Empty, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for c := range s.actionChans {
-		c <- pb.ActionStreamResponse{Type: pb.StreamType_DISPATCH, Target: e.Target, Cmd: e.Message}
-	}
-	return &pb.Empty{}, nil
+	err := stream.PublishAnnounce(e.Target, e.Message)
+	return &pb.Empty{}, err
+}
+
+func (s *grpcServer) Dispatch(ctx context.Context, e *pb.DispatchRequest) (*pb.Empty, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	err := stream.PublishCommand(e.Target, e.Cmd)
+	return &pb.Empty{}, err
 }
 
 func (s *grpcServer) InitPlayerProfile(ctx context.Context, e *pb.InitPlayerProfileRequest) (*pb.InitPlayerProfileResponse, error) {
@@ -100,18 +96,12 @@ func (s *grpcServer) SetPlayerGroups(ctx context.Context, e *pb.SetPlayerGroupsR
 	}
 
 	if playerData.Stats.CurrentServer != "" {
-		for c := range s.playerChans {
-			c <- pb.PlayerStreamResponse{
-				Type:     pb.StreamType_DISPATCH,
-				Target:   playerData.Stats.CurrentServer,
-				SyncType: pb.PlayerSyncType_GROUPS,
-				Entry: &pb.PlayerEntry{
-					PlayerUUID: e.PlayerUUID,
-					Groups:     e.Groups,
-				},
-			}
-		}
-
+		stream.PublishPlayerGroups(playerData.Stats.CurrentServer,
+			&pb.PlayerEntry{
+				PlayerUUID: e.PlayerUUID,
+				Groups:     e.Groups,
+			},
+		)
 	}
 	return &pb.Empty{}, err
 }
@@ -191,9 +181,7 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
-		for c := range s.punishChans {
-			c <- pb.PunishStreamResponse{Type: pb.StreamType_DISPATCH, Target: serverName, Entry: entry}
-		}
+		stream.PublishPunish(serverName, entry)
 	}
 
 	return &pb.SetPlayerPunishResponse{Noprofile: noProfile, Offline: offline, Duplicate: duplicate, Cooldown: coolDown}, err

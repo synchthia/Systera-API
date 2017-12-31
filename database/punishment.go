@@ -180,7 +180,5 @@ func SetPlayerPunishment(force bool, from, to PunishPlayerData, level PunishLeve
 		"expire": expireDate,
 	}).Infof("[Punishment] %s -> %s", from.Name, to.Name)
 
-	//logrus.Infof("[Punishment] %s -> %s (Level: %s / Reason: %s) %s",
-	//	from.Name, to.Name, level, reason, expireDate)
 	return noProfile, offline, false, false, nil
 }

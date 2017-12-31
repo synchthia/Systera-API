@@ -11,12 +11,8 @@ message PlayerData { string UUID = 1; string name = 2; }
  * Systera API
  */
 service Systera {
-    rpc Ping(Empty) returns (Empty) {}
-    rpc ActionStream(StreamRequest) returns (stream ActionStreamResponse) {}
-    rpc PlayerStream(StreamRequest) returns (stream PlayerStreamResponse) {}
-    rpc PunishStream(StreamRequest) returns (stream PunishStreamResponse) {}
     rpc Announce(AnnounceRequest) returns (Empty) {}
-    rpc QuitStream(QuitStreamRequest) returns (Empty) {}
+    rpc Dispatch(DispatchRequest) returns (Empty) {}
 
     rpc InitPlayerProfile(InitPlayerProfileRequest) returns (InitPlayerProfileResponse) {}
     rpc FetchPlayerProfile(FetchPlayerProfileRequest) returns (FetchPlayerProfileResponse) {}
@@ -36,16 +32,42 @@ service Systera {
 /*
  * Stream API
  */
-enum StreamType { QUIT = 0; CONNECT = 1; RESTORED = 2; DISPATCH = 3; }
-message StreamRequest { string name = 1; StreamType type = 2; }
-message ActionStreamResponse { StreamType type = 1; string target = 2; string cmd = 3; }
-message PunishStreamResponse { StreamType type = 1; string target = 2; PunishEntry entry = 3; }
-
-enum PlayerSyncType { GROUPS = 0; SETTINGS = 1; }
-message PlayerStreamResponse { StreamType type = 1; string target = 2; PlayerSyncType syncType = 3; PlayerEntry entry = 4; }
-
 message AnnounceRequest { string target = 1; string message = 2; }
-message QuitStreamRequest { string name = 1; }
+message DispatchRequest { string target = 1; string cmd = 2 ; }
+
+// ----------------
+// STREAMING
+// ----------------
+
+// System
+message SystemStream {
+    enum Type {
+        DISPATCH = 0;
+        ANNOUNCE = 1;
+    }
+    Type type = 1;
+    string msg = 2;
+}
+
+// Player
+message PlayerEntryStream {
+    enum Type {
+      ALL = 0;
+      GROUPS = 1;
+      SETTINGS = 2;
+    }
+    Type type = 1;
+    PlayerEntry entry = 2; 
+}
+
+// Punishment
+message PunishEntryStream {
+    enum Type {
+        PUNISH = 0;
+    }
+    Type type = 1;
+    PunishEntry entry = 2;
+}
 
 /*
  * PLAYER PROFILE
@@ -77,25 +99,25 @@ message SetPlayerSettingsRequest { string playerUUID = 1; string key = 2; bool v
 enum PunishLevel { WARN = 0; KICK = 1; TBAN = 2; PBAN = 3; }
 
 message PunishEntry {
-  bool available = 1;
+    bool available = 1;
 
-  PunishLevel level = 2;
-  string reason = 3;
+    PunishLevel level = 2;
+    string reason = 3;
 
-  int64 date = 4;
-  int64 expire = 5;
+    int64 date = 4;
+    int64 expire = 5;
 
-  PlayerData punishedFrom = 6;
-  PlayerData punishedTo = 7;
+    PlayerData punishedFrom = 6;
+    PlayerData punishedTo = 7;
 }
 
 message GetPlayerPunishRequest { string playerUUID = 1; PunishLevel filterLevel = 2; bool includeExpired = 3; }
 message GetPlayerPunishResponse { repeated PunishEntry entry = 1; }
 
 message SetPlayerPunishRequest {
-  bool remote = 1;
-  bool force = 2;
-  PunishEntry entry = 3;
+    bool remote = 1;
+    bool force = 2;
+    PunishEntry entry = 3;
 }
 message SetPlayerPunishResponse { bool noprofile = 1; bool offline = 2; bool duplicate = 3; bool cooldown = 4; }
 
@@ -103,10 +125,10 @@ message SetPlayerPunishResponse { bool noprofile = 1; bool offline = 2; bool dup
  * GROUP PERMISISONS
  */
 message GroupEntry {
-  string groupName = 1;
-  string groupPrefix = 2;
-  repeated string globalPerms = 3;
-  repeated string serverPerms = 4;
+    string groupName = 1;
+    string groupPrefix = 2;
+    repeated string globalPerms = 3;
+    repeated string serverPerms = 4;
 }
 message FetchGroupsRequest { string serverName = 1; }
 message FetchGroupsResponse { repeated GroupEntry groups = 1; }

@@ -9,6 +9,7 @@ import (
 	"gitlab.com/Startail/Systera-API/database"
 	"gitlab.com/Startail/Systera-API/logger"
 	"gitlab.com/Startail/Systera-API/server"
+	"gitlab.com/Startail/Systera-API/stream"
 )
 
 func startGRPC(port string) error {
@@ -25,6 +26,15 @@ func main() {
 
 	// Init
 	logrus.Printf("[API] Starting SYSTERA-API Server...")
+
+	// Redis
+	go func() {
+		redisAddr := os.Getenv("REDIS_ADDRESS")
+		if len(redisAddr) == 0 {
+			redisAddr = "localhost:6379"
+		}
+		stream.NewRedisPool(redisAddr)
+	}()
 
 	// MongoDB
 	mongoAddr := os.Getenv("SYSTERA_MONGO_ADDRESS")
