@@ -2,13 +2,11 @@ package database
 
 import (
 	"errors"
+	"strings"
 	"time"
 
+	"github.com/globalsign/mgo"
 	"github.com/sirupsen/logrus"
-
-	"strings"
-
-	"gopkg.in/mgo.v2"
 )
 
 var session *mgo.Session

@@ -3,8 +3,8 @@ package database
 import (
 	"errors"
 
+	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/mgo.v2/bson"
 )
 
 // GroupData - Permission Group Data

@@ -4,10 +4,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
-
 	"gitlab.com/Startail/Systera-API/util"
-	"gopkg.in/mgo.v2/bson"
 )
 
 // PlayerData - PlayerProfile on Database
