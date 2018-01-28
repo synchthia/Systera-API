@@ -27,20 +27,14 @@ const (
 
 // PunishmentData - PunishData on Database
 type PunishmentData struct {
-	ID           bson.ObjectId    `bson:"_id,omitempty"`
-	Available    bool             `bson:"available"`
-	Level        PunishLevel      `bson:"level"`
-	Reason       string           `bson:"reason"`
-	Date         int64            `bson:"date"`
-	Expire       int64            `bson:"expire,omitempty"`
-	PunishedFrom PunishPlayerData `bson:"punished_from"`
-	PunishedTo   PunishPlayerData `bson:"punished_to"`
-}
-
-// PunishPlayerData - Punish PlayerData
-type PunishPlayerData struct {
-	UUID string `bson:"uuid"`
-	Name string `bson:"name"`
+	ID           bson.ObjectId  `bson:"_id,omitempty"`
+	Available    bool           `bson:"available"`
+	Level        PunishLevel    `bson:"level"`
+	Reason       string         `bson:"reason"`
+	Date         int64          `bson:"date"`
+	Expire       int64          `bson:"expire,omitempty"`
+	PunishedFrom PlayerIdentity `bson:"punished_from"`
+	PunishedTo   PlayerIdentity `bson:"punished_to"`
 }
 
 func (i PunishLevel) String() string {
@@ -98,7 +92,7 @@ func GetPlayerPunishment(playerUUID string, filterLevel PunishLevel, includeExpi
 }
 
 // SetPlayerPunishment - Punish Player
-func SetPlayerPunishment(force bool, from, to PunishPlayerData, level PunishLevel, reason string, date, expire int64) (bool, bool, bool, bool, error) {
+func SetPlayerPunishment(force bool, from, to PlayerIdentity, level PunishLevel, reason string, date, expire int64) (bool, bool, bool, bool, error) {
 	if _, err := GetMongoSession(); err != nil {
 		return false, false, false, false, err
 	}

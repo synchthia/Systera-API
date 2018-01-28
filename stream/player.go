@@ -3,18 +3,18 @@ package stream
 import (
 	"encoding/json"
 
-	"gitlab.com/Startail/Systera-API/apipb"
+	"gitlab.com/Startail/Systera-API/systerapb"
 
 	"github.com/sirupsen/logrus"
 )
 
 // PublishPlayerGroups - Publish Player Groups
-func PublishPlayerGroups(target string, data *apipb.PlayerEntry) {
+func PublishPlayerGroups(target string, data *systerapb.PlayerEntry) {
 	c := pool.Get()
 	defer c.Close()
 
-	d := &apipb.PlayerEntryStream{
-		Type:  apipb.PlayerEntryStream_GROUPS,
+	d := &systerapb.PlayerEntryStream{
+		Type:  systerapb.PlayerEntryStream_GROUPS,
 		Entry: data,
 	}
 	serialized, _ := json.Marshal(&d)

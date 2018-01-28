@@ -54,7 +54,7 @@ func genCollWithIndex(collName string, keys []string) {
 		// Index
 		err := coll.EnsureIndex(mgo.Index{
 			Key:    keys,
-			Unique: true,
+			Unique: false,
 		})
 
 		if err != nil {

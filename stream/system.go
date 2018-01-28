@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/sirupsen/logrus"
-	"gitlab.com/Startail/Systera-API/apipb"
+	"gitlab.com/Startail/Systera-API/systerapb"
 )
 
 // PublishAnnounce - Publish Server Announce
@@ -12,8 +12,8 @@ func PublishAnnounce(target, msg string) error {
 	c := pool.Get()
 	defer c.Close()
 
-	d := &apipb.SystemStream{
-		Type: apipb.SystemStream_ANNOUNCE,
+	d := &systerapb.SystemStream{
+		Type: systerapb.SystemStream_ANNOUNCE,
 		Msg:  msg,
 	}
 	serialized, _ := json.Marshal(&d)
@@ -32,8 +32,8 @@ func PublishCommand(target, cmd string) error {
 	c := pool.Get()
 	defer c.Close()
 
-	d := &apipb.SystemStream{
-		Type: apipb.SystemStream_DISPATCH,
+	d := &systerapb.SystemStream{
+		Type: systerapb.SystemStream_DISPATCH,
 		Msg:  cmd,
 	}
 	serialized, _ := json.Marshal(&d)

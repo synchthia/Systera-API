@@ -7,9 +7,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	pb "gitlab.com/Startail/Systera-API/apipb"
 	"gitlab.com/Startail/Systera-API/database"
 	"gitlab.com/Startail/Systera-API/stream"
+	pb "gitlab.com/Startail/Systera-API/systerapb"
 	"gitlab.com/Startail/Systera-API/util"
 	"google.golang.org/grpc"
 )
@@ -28,6 +28,8 @@ type Server interface {
 
 	GetPlayerPunish(playerUUID string, filterLevel pb.PunishLevel, includeExpired bool) []pb.PunishEntry
 	SetPlayerPunish(remote bool, force bool, entry pb.PunishEntry) (bool, bool, bool, bool, error)
+
+	Report(from pb.PlayerData, to pb.PlayerData, message string) error
 
 	FetchGroups(serverName string) []string
 }
@@ -163,12 +165,12 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 		entry.PunishedTo.UUID = targetUUID
 	}
 
-	from := database.PunishPlayerData{
+	from := database.PlayerIdentity{
 		UUID: entry.PunishedFrom.UUID,
 		Name: entry.PunishedFrom.Name,
 	}
 
-	to := database.PunishPlayerData{
+	to := database.PlayerIdentity{
 		UUID: entry.PunishedTo.UUID,
 		Name: entry.PunishedTo.Name,
 	}
@@ -185,6 +187,38 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 	}
 
 	return &pb.SetPlayerPunishResponse{Noprofile: noProfile, Offline: offline, Duplicate: duplicate, Cooldown: coolDown}, err
+}
+
+func (s *grpcServer) Report(ctx context.Context, e *pb.ReportRequest) (*pb.ReportResponse, error) {
+	from := database.PlayerIdentity{
+		UUID: e.From.UUID,
+		Name: e.From.Name,
+	}
+	to := database.PlayerIdentity{
+		UUID: e.To.UUID,
+		Name: e.To.Name,
+	}
+
+	entry, err := database.SetReport(from, to, e.Message)
+	if err == nil {
+		stream.PublishReport(
+			&pb.ReportEntry{
+				From: &pb.PlayerData{
+					UUID: entry.ReportedFrom.UUID,
+					Name: entry.ReportedFrom.Name,
+				},
+				To: &pb.PlayerData{
+					UUID: entry.ReportedTo.UUID,
+					Name: entry.ReportedTo.Name,
+				},
+				Message: entry.Message,
+				Date:    entry.Date,
+				Server:  entry.Server,
+			},
+		)
+	}
+
+	return &pb.ReportResponse{}, err
 }
 
 func (s *grpcServer) FetchGroups(ctx context.Context, e *pb.FetchGroupsRequest) (*pb.FetchGroupsResponse, error) {

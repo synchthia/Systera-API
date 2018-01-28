@@ -43,6 +43,12 @@ type PlayerAddresses struct {
 	Date     int64  `bson:"date"`
 }
 
+// PlayerIdentity - Player Data Set (Used from ex. punishment, report...)
+type PlayerIdentity struct {
+	UUID string `bson:"uuid"`
+	Name string `bson:"name"`
+}
+
 // UUIDToName - Get Player Name from UUID
 func UUIDToName(uuid string) string {
 	if _, err := GetMongoSession(); err != nil {

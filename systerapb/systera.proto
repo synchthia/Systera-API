@@ -1,5 +1,5 @@
 syntax = "proto3";
-package apipb;
+package systerapb;
 
 option java_package = "net.synchthia.api.systera";
 option java_outer_classname = "SysteraProtos";
@@ -25,6 +25,8 @@ service Systera {
 
     rpc GetPlayerPunish(GetPlayerPunishRequest) returns (GetPlayerPunishResponse) {}
     rpc SetPlayerPunish(SetPlayerPunishRequest) returns (SetPlayerPunishResponse) {}
+
+    rpc Report(ReportRequest) returns (ReportResponse) {}
 
     rpc FetchGroups(FetchGroupsRequest) returns (FetchGroupsResponse) {}
 }
@@ -67,6 +69,15 @@ message PunishEntryStream {
     }
     Type type = 1;
     PunishEntry entry = 2;
+}
+
+// Report
+message ReportEntryStream {
+    enum Type {
+        REPORT = 0;
+    }
+    Type type = 1;
+    ReportEntry entry = 2;
 }
 
 /*
@@ -120,6 +131,16 @@ message SetPlayerPunishRequest {
     PunishEntry entry = 3;
 }
 message SetPlayerPunishResponse { bool noprofile = 1; bool offline = 2; bool duplicate = 3; bool cooldown = 4; }
+
+message ReportEntry {
+    PlayerData from = 1;
+    PlayerData to = 2;
+    string message = 3;
+    int64 date = 4;
+    string server = 5;
+}
+message ReportRequest { PlayerData from = 1; PlayerData to = 2; string message = 3; }
+message ReportResponse {}
 
 /*
  * GROUP PERMISISONS

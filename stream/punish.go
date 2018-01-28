@@ -4,16 +4,16 @@ import (
 	"encoding/json"
 
 	"github.com/sirupsen/logrus"
-	"gitlab.com/Startail/Systera-API/apipb"
+	"gitlab.com/Startail/Systera-API/systerapb"
 )
 
 // PublishPunish - Publish Punish
-func PublishPunish(target string, data *apipb.PunishEntry) {
+func PublishPunish(target string, data *systerapb.PunishEntry) {
 	c := pool.Get()
 	defer c.Close()
 
-	d := &apipb.PunishEntryStream{
-		Type:  apipb.PunishEntryStream_PUNISH,
+	d := &systerapb.PunishEntryStream{
+		Type:  systerapb.PunishEntryStream_PUNISH,
 		Entry: data,
 	}
 	serialized, _ := json.Marshal(&d)

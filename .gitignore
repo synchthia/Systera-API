@@ -1,6 +1,6 @@
 ## Proto
-apipb/copyjava.bat
-apipb/net
+systerapb/copyjava.bat
+systerapb/net
 
 ## Custom ignores
 *.log
