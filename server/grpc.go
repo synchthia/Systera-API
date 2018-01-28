@@ -27,7 +27,7 @@ type Server interface {
 	SetPlayerSettings(playerUUID, key string, value bool) error
 
 	GetPlayerPunish(playerUUID string, filterLevel pb.PunishLevel, includeExpired bool) []pb.PunishEntry
-	SetPlayerPunish(remote bool, force bool, entry pb.PunishEntry) (bool, bool, bool, bool, error)
+	SetPlayerPunish(remote, force bool, entry pb.PunishEntry) (bool, bool, bool, bool, error)
 
 	Report(from pb.PlayerData, to pb.PlayerData, message string) error
 
@@ -177,13 +177,9 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 
 	noProfile, offline, duplicate, coolDown, err := database.SetPlayerPunishment(e.Force, from, to, level, entry.Reason, entry.Date, entry.Expire)
 
-	if e.Remote && !noProfile && !offline && !duplicate && !coolDown && err == nil {
+	if err == nil {
 		logrus.Debugf("DISPATCH: " + playerData.Name)
-		// DISPATCH target
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		stream.PublishPunish(serverName, entry)
+		stream.PublishPunish(e.Remote, serverName, entry)
 	}
 
 	return &pb.SetPlayerPunishResponse{Noprofile: noProfile, Offline: offline, Duplicate: duplicate, Cooldown: coolDown}, err

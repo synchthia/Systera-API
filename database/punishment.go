@@ -18,11 +18,11 @@ const (
 	//KICK - Kick from Server
 	KICK
 
-	//TBAN - Temporary BAN
-	TBAN
+	//TEMPBAN - Temporary BAN
+	TEMPBAN
 
-	//PBAN - Permanently BAN
-	PBAN
+	//PERMBAN - Permanently BAN
+	PERMBAN
 )
 
 // PunishmentData - PunishData on Database
@@ -43,10 +43,10 @@ func (i PunishLevel) String() string {
 		return "WARN"
 	case KICK:
 		return "KICK"
-	case TBAN:
-		return "TBAN"
-	case PBAN:
-		return "PBAN"
+	case TEMPBAN:
+		return "TEMPBAN"
+	case PERMBAN:
+		return "PERMBAN"
 	}
 	return ""
 }
@@ -126,14 +126,14 @@ func SetPlayerPunishment(force bool, from, to PlayerIdentity, level PunishLevel,
 		to.Name = playerData.Name
 
 		// if Offline
-		if level != TBAN && level != PBAN && playerData.Stats.CurrentServer == "" {
+		if level != TEMPBAN && level != PERMBAN && playerData.Stats.CurrentServer == "" {
 			offline = true
 			return noProfile, offline, false, false, nil
 		}
 	}
 
 	//If already Permanently Banned, return Duplicate
-	availableBans, err := GetPlayerPunishment(to.UUID, PBAN, false)
+	availableBans, err := GetPlayerPunishment(to.UUID, PERMBAN, false)
 	logrus.Debugf("[Punishment] PBAN: = %d", len(availableBans))
 	if len(availableBans) != 0 {
 		return noProfile, offline, true, false, err
@@ -141,9 +141,9 @@ func SetPlayerPunishment(force bool, from, to PlayerIdentity, level PunishLevel,
 
 	//全処罰で、Expireが来ていないAvailableな奴をすべて取得する
 	//1つでもあればクールダウンを理由でreturn
-	availableTempBan, err := GetPlayerPunishment(to.Name, TBAN, false)
+	availableTempBan, err := GetPlayerPunishment(to.Name, TEMPBAN, false)
 	logrus.Debugf("[Punishment] Non Expired Punishments: %d", len(availableTempBan))
-	if level >= TBAN && len(availableTempBan) != 0 {
+	if level >= TEMPBAN && len(availableTempBan) != 0 {
 		return noProfile, offline, false, true, err
 	}
 

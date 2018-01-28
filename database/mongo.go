@@ -51,6 +51,11 @@ func genCollWithIndex(collName string, keys []string) {
 	defer session.Close()
 
 	if coll := session.DB("systera").C(collName); err == nil {
+		indexes, _ := coll.Indexes()
+		if len(indexes) != 0 {
+			return
+		}
+
 		// Index
 		err := coll.EnsureIndex(mgo.Index{
 			Key:    keys,

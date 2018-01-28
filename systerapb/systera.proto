@@ -107,7 +107,7 @@ message SetPlayerSettingsRequest { string playerUUID = 1; string key = 2; bool v
 /*
  * PLAYER PUNISHMENTS
  */
-enum PunishLevel { WARN = 0; KICK = 1; TBAN = 2; PBAN = 3; }
+enum PunishLevel { WARN = 0; KICK = 1; TEMPBAN = 2; PERMBAN = 3; }
 
 message PunishEntry {
     bool available = 1;
