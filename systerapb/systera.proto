@@ -126,9 +126,8 @@ message GetPlayerPunishRequest { string playerUUID = 1; PunishLevel filterLevel 
 message GetPlayerPunishResponse { repeated PunishEntry entry = 1; }
 
 message SetPlayerPunishRequest {
-    bool remote = 1;
-    bool force = 2;
-    PunishEntry entry = 3;
+    bool force = 1;
+    PunishEntry entry = 2;
 }
 message SetPlayerPunishResponse { bool noprofile = 1; bool offline = 2; bool duplicate = 3; bool cooldown = 4; }
 
