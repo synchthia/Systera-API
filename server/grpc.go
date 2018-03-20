@@ -153,9 +153,10 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 	// if offline in the server, it should be input server name.
 	entry := e.Entry
 	level := database.PunishLevel(entry.Level)
-	if e.Force && entry.PunishedTo.UUID == "" {
-		targetUUID, err := database.NameToUUIDwithMojang(entry.PunishedTo.Name)
+	if e.Force || entry.PunishedTo.UUID == "" {
+		targetUUID, err := database.NameToUUID(entry.PunishedTo.Name)
 		if err != nil {
+			logrus.WithError(err).Errorf("[MojangAPI] Failed Lookup Player UUID: %s", entry.PunishedTo.Name)
 			return &pb.SetPlayerPunishResponse{}, err
 		}
 		entry.PunishedTo.UUID = targetUUID
@@ -175,6 +176,7 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 
 	if err == nil {
 		stream.PublishPunish(entry)
+		logrus.Printf("%s", entry)
 	}
 
 	return &pb.SetPlayerPunishResponse{Noprofile: noProfile, Offline: offline, Duplicate: duplicate, Cooldown: coolDown}, err

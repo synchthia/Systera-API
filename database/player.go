@@ -4,9 +4,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/minotar/minecraft"
+
 	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
-	"gitlab.com/Startail/Systera-API/util"
 )
 
 // PlayerData - PlayerProfile on Database
@@ -91,13 +92,12 @@ func NameToUUID(name string) (string, error) {
 
 // NameToUUIDwithMojang - Get UUID from Mojang API
 func NameToUUIDwithMojang(name string) (string, error) {
-	playerData := PlayerData{}
-	err := util.GetFromJSONAPI("https://api.mojang.com/users/profiles/minecraft/"+name, &playerData)
+	uuid, err := minecraft.NewMinecraft().GetUUID(name)
 	if err != nil {
 		return "", err
 	}
 
-	return playerData.UUID, nil
+	return uuid, nil
 }
 
 // Find - Find PlayerProfile
