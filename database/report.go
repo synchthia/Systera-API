@@ -30,7 +30,7 @@ func SetReport(from, to PlayerIdentity, message string) (ReportData, error) {
 
 	nowtime := time.Now().UnixNano() / int64(time.Millisecond)
 
-	fromUser, findErr := Find(from.UUID)
+	fromUser, findErr := FindPlayer(from.UUID)
 	if findErr != nil {
 		logrus.WithError(findErr).Errorf("[Report] Error @ SetReport")
 		return ReportData{}, findErr

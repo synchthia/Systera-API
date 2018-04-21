@@ -76,14 +76,14 @@ func (s *grpcServer) InitPlayerProfile(ctx context.Context, e *pb.InitPlayerProf
 }
 
 func (s *grpcServer) FetchPlayerProfile(ctx context.Context, e *pb.FetchPlayerProfileRequest) (*pb.FetchPlayerProfileResponse, error) {
-	playerData, err := database.Find(e.PlayerUUID)
+	playerData, err := database.FindPlayer(e.PlayerUUID)
 	return &pb.FetchPlayerProfileResponse{
 		Entry: s.PlayerData_DBtoPB(playerData),
 	}, err
 }
 
 func (s *grpcServer) FetchPlayerProfileByName(ctx context.Context, e *pb.FetchPlayerProfileByNameRequest) (*pb.FetchPlayerProfileResponse, error) {
-	playerData, err := database.FindByName(e.PlayerName)
+	playerData, err := database.FindPlayerByName(e.PlayerName)
 	return &pb.FetchPlayerProfileResponse{
 		Entry: s.PlayerData_DBtoPB(playerData),
 	}, err
@@ -91,7 +91,7 @@ func (s *grpcServer) FetchPlayerProfileByName(ctx context.Context, e *pb.FetchPl
 
 func (s *grpcServer) SetPlayerGroups(ctx context.Context, e *pb.SetPlayerGroupsRequest) (*pb.Empty, error) {
 	err := database.SetPlayerGroups(e.PlayerUUID, e.Groups)
-	playerData, err := database.Find(e.PlayerUUID)
+	playerData, err := database.FindPlayer(e.PlayerUUID)
 
 	if err != nil {
 		return &pb.Empty{}, err
@@ -114,7 +114,7 @@ func (s *grpcServer) SetPlayerServer(ctx context.Context, e *pb.SetPlayerServerR
 }
 
 func (s *grpcServer) RemovePlayerServer(ctx context.Context, e *pb.RemovePlayerServerRequest) (*pb.Empty, error) {
-	playerData, err := database.Find(e.PlayerUUID)
+	playerData, err := database.FindPlayer(e.PlayerUUID)
 
 	if e.ServerName == playerData.Stats.CurrentServer {
 		err = database.SetPlayerServer(e.PlayerUUID, "")
@@ -172,14 +172,21 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 		Name: entry.PunishedTo.Name,
 	}
 
-	noProfile, offline, duplicate, coolDown, err := database.SetPlayerPunishment(e.Force, from, to, level, entry.Reason, entry.Date, entry.Expire)
+	success, result, err := database.SetPlayerPunishment(e.Force, from, to, level, entry.Reason, entry.Date, entry.Expire)
 
-	if err == nil {
+	if err == nil && success {
 		stream.PublishPunish(entry)
 		logrus.Printf("%s", entry)
 	}
 
-	return &pb.SetPlayerPunishResponse{Noprofile: noProfile, Offline: offline, Duplicate: duplicate, Cooldown: coolDown}, err
+	response := &pb.SetPlayerPunishResponse{
+		Noprofile: result.NoProfile,
+		Offline:   result.Offline,
+		Duplicate: result.Duplicate,
+		Cooldown:  result.Cooldown,
+	}
+
+	return response, err
 }
 
 func (s *grpcServer) Report(ctx context.Context, e *pb.ReportRequest) (*pb.ReportResponse, error) {

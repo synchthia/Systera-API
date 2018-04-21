@@ -100,8 +100,8 @@ func NameToUUIDwithMojang(name string) (string, error) {
 	return uuid, nil
 }
 
-// Find - Find PlayerProfile
-func Find(uuid string) (PlayerData, error) {
+// FindPlayer - Find PlayerProfile
+func FindPlayer(uuid string) (PlayerData, error) {
 	if _, err := GetMongoSession(); err != nil {
 		return PlayerData{}, err
 	}
@@ -115,8 +115,8 @@ func Find(uuid string) (PlayerData, error) {
 	return playerData, err
 }
 
-// FindByName - Find PlayerProfile from Name
-func FindByName(name string) (PlayerData, error) {
+// FindPlayerByName - Find PlayerProfile from Name
+func FindPlayerByName(name string) (PlayerData, error) {
 	if _, err := GetMongoSession(); err != nil {
 		return PlayerData{}, err
 	}
