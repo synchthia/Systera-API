@@ -155,8 +155,14 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 	level := database.PunishLevel(entry.Level)
 	if e.Force || entry.PunishedTo.UUID == "" {
 		targetUUID, err := database.NameToUUID(entry.PunishedTo.Name)
+		if err.Error() == "unable to GetAPIProfile: user not found" {
+			response := &pb.SetPlayerPunishResponse{
+				Noprofile: true,
+			}
+			return response, nil
+		}
 		if err != nil {
-			logrus.WithError(err).Errorf("[MojangAPI] Failed Lookup Player UUID: %s", entry.PunishedTo.Name)
+			logrus.WithError(err).Errorf("[MojangAPI] Failed Lookup Player UUIDDD: %s", entry.PunishedTo.Name)
 			return &pb.SetPlayerPunishResponse{}, err
 		}
 		entry.PunishedTo.UUID = targetUUID
