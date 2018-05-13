@@ -22,6 +22,5 @@ func PublishPunish(data *systerapb.PunishEntry) {
 	_, err := c.Do("PUBLISH", "systera.punish", string(serialized))
 	if err != nil {
 		logrus.WithError(err).Errorf("[Publish] Failed Publish Punishment")
-		return
 	}
 }

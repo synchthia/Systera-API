@@ -81,7 +81,7 @@ func NameToUUID(name string) (string, error) {
 	coll := session.DB("systera").C("players")
 
 	playerData := PlayerData{}
-	err := coll.Find(bson.M{"name": name}).One(&playerData)
+	err := coll.Find(bson.M{"name_lower": strings.ToLower(name)}).One(&playerData)
 	if err != nil {
 		uuid, err := NameToUUIDwithMojang(name)
 		return uuid, err
