@@ -2,6 +2,7 @@
 systerapb/copyjava.bat
 systerapb/net
 systerapb/java/target
+systerapb/java/src/main/proto/
 *.iml
 dependency-reduced-pom.xml
 
