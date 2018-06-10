@@ -43,7 +43,7 @@ build-java:
   - cd /go/src/gitlab.com/${CI_PROJECT_PATH}/systerapb
   - if [ ! -e $HOME/.m2/ ]; then mkdir -p $HOME/.m2/; fi
   - echo -e ${CI_MVN_SETTINGS} > $HOME/.m2/settings.xml
-  - cp -Rfv ./*.proto ./java/src/main/proto/
+  - mkdir -p ./java/src/main/proto/ && cp -Rfv ./*.proto ./java/src/main/proto/
   - cd java
   - mvn clean deploy
 
