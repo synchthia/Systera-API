@@ -35,6 +35,18 @@ build-app:
   - cd /go/src/gitlab.com/${CI_PROJECT_PATH}
   - go build -o systera ./cmd/systera/main.go
 
+build-java:
+  stage: build_app
+  image: maven:latest
+  script:
+  - mkdir -p /go/src && ln -s /builds /go/src/gitlab.com
+  - cd /go/src/gitlab.com/${CI_PROJECT_PATH}/systerapb
+  - if [ ! -e $HOME/.m2/ ]; then mkdir -p $HOME/.m2/; fi
+  - echo -e ${CI_MVN_SETTINGS} > $HOME/.m2/settings.xml
+  - cp -Rfv ./*.proto ./java/src/main/proto/
+  - cd java
+  - mvn clean deploy
+
 build-image:
   image: docker:latest
   stage: build_image

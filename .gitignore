@@ -1,6 +1,9 @@
 ## Proto
 systerapb/copyjava.bat
 systerapb/net
+systerapb/java/target
+*.iml
+dependency-reduced-pom.xml
 
 ## Custom ignores
 *.log
