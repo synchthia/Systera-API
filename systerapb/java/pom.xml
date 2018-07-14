@@ -93,11 +93,14 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <artifactSet>
+                            <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
+                            <!-- when downloading via Maven we can pull depends individually -->
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <!-- <artifactSet>
                                 <includes>
                                     <include>*:*</include>
                                 </includes>
-                            </artifactSet>
+                            </artifactSet> -->
                         </configuration>
                     </execution>
                 </executions>
