@@ -101,6 +101,19 @@
                                     <include>*:*</include>
                                 </includes>
                             </artifactSet> -->
+                            <artifactSet>
+                                <includes>
+                                    <include>net.synchthia.api:*</include>
+                                    <include>io.grpc:*</include>
+                                </includes>
+                            </artifactSet>
+                            <relocation>
+                                <pattern>org.apache</pattern>
+                                <shadedPattern>net.synchthia.api.systera.libs.org.apache</shadedPattern>
+                                    <includes>
+                                        <include>org.apache.*</include>
+                                    </includes>
+                            </relocation>
                         </configuration>
                     </execution>
                 </executions>
