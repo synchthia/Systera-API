@@ -96,24 +96,6 @@
                             <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
                             <!-- when downloading via Maven we can pull depends individually -->
                             <shadedArtifactAttached>true</shadedArtifactAttached>
-                            <!-- <artifactSet>
-                                <includes>
-                                    <include>*:*</include>
-                                </includes>
-                            </artifactSet> -->
-                            <artifactSet>
-                                <includes>
-                                    <include>net.synchthia.api:*</include>
-                                    <include>io.grpc:*</include>
-                                </includes>
-                            </artifactSet>
-                            <relocation>
-                                <pattern>org.apache</pattern>
-                                <shadedPattern>net.synchthia.api.systera.libs.org.apache</shadedPattern>
-                                    <includes>
-                                        <include>org.apache.*</include>
-                                    </includes>
-                            </relocation>
                         </configuration>
                     </execution>
                 </executions>
