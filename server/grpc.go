@@ -31,7 +31,13 @@ type Server interface {
 
 	Report(from pb.PlayerData, to pb.PlayerData, message string) error
 
-	FetchGroups(serverName string) []string
+	FetchGroups(serverName string) ([]pb.GroupEntry, error)
+
+	CreateGroup(groups pb.GroupEntry) error
+	RemoveGroup(groupName string) error
+
+	AddPermission(groupName, target, permission []string) error
+	RemovePermission(groupName, target, permission []string) error
 }
 
 type grpcServer struct {
@@ -230,16 +236,44 @@ func (s *grpcServer) Report(ctx context.Context, e *pb.ReportRequest) (*pb.Repor
 
 func (s *grpcServer) FetchGroups(ctx context.Context, e *pb.FetchGroupsRequest) (*pb.FetchGroupsResponse, error) {
 	groups, err := database.FindGroupData()
+
 	var allGroups []*pb.GroupEntry
-	for _, value := range groups {
-		allGroups = append(allGroups, &pb.GroupEntry{
-			GroupName:   value.Name,
-			GroupPrefix: value.Prefix,
-			GlobalPerms: value.Permissions["GLOBAL"],
-			ServerPerms: value.Permissions[e.ServerName],
-		})
+	for _, group := range groups {
+		pbGroup := s.GroupData_DBtoPB(e.ServerName, group)
+		allGroups = append(allGroups, pbGroup)
 	}
+
 	return &pb.FetchGroupsResponse{Groups: allGroups}, err
+}
+
+func (s *grpcServer) CreateGroup(ctx context.Context, e *pb.CreateGroupRequest) (*pb.Empty, error) {
+	d := database.GroupData{}
+	d.Name = e.GroupName
+	d.Prefix = e.GroupPrefix
+
+	var dbPerms map[string][]string
+	for _, v := range e.PermsEntry {
+		dbPerms[v.ServerName] = v.Permissions
+	}
+	d.Permissions = dbPerms
+
+	err := database.CreateGroup(d)
+	return &pb.Empty{}, err
+}
+
+func (s *grpcServer) RemoveGroup(ctx context.Context, e *pb.RemoveGroupRequest) (*pb.Empty, error) {
+	err := database.RemoveGroup(e.GroupName)
+	return &pb.Empty{}, err
+}
+
+func (s *grpcServer) AddPermission(ctx context.Context, e *pb.AddPermissionRequest) (*pb.Empty, error) {
+	err := database.AddPermission(e.GroupName, e.Target, e.Permissions)
+	return &pb.Empty{}, err
+}
+
+func (s *grpcServer) RemovePermission(ctx context.Context, e *pb.RemovePermissionRequest) (*pb.Empty, error) {
+	err := database.RemovePermission(e.GroupName, e.Target, e.Permissions)
+	return &pb.Empty{}, err
 }
 
 func (s *grpcServer) PlayerData_DBtoPB(dbEntry database.PlayerData) *pb.PlayerEntry {
@@ -248,5 +282,14 @@ func (s *grpcServer) PlayerData_DBtoPB(dbEntry database.PlayerData) *pb.PlayerEn
 		PlayerName: dbEntry.Name,
 		Groups:     dbEntry.Groups,
 		Settings:   util.StructToBoolMap(dbEntry.Settings),
+	}
+}
+
+func (s *grpcServer) GroupData_DBtoPB(serverName string, dbEntry database.GroupData) *pb.GroupEntry {
+	return &pb.GroupEntry{
+		GroupName:   dbEntry.Name,
+		GroupPrefix: dbEntry.Prefix,
+		GlobalPerms: dbEntry.Permissions["global"],
+		ServerPerms: dbEntry.Permissions[serverName],
 	}
 }

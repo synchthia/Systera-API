@@ -4,7 +4,7 @@ package systerapb;
 option java_package = "net.synchthia.api.systera";
 option java_outer_classname = "SysteraProtos";
 
-message Empty {}
+message Empty {} 
 message PlayerData { string UUID = 1; string name = 2; }
 
 /*
@@ -29,6 +29,12 @@ service Systera {
     rpc Report(ReportRequest) returns (ReportResponse) {}
 
     rpc FetchGroups(FetchGroupsRequest) returns (FetchGroupsResponse) {}
+
+    rpc CreateGroup(CreateGroupRequest) returns (Empty) {}
+    rpc RemoveGroup(RemoveGroupRequest) returns (Empty) {}
+    
+    rpc AddPermission (AddPermissionRequest) returns (Empty) {}
+    rpc RemovePermission (RemovePermissionRequest) returns (Empty) {}
 }
 
 /*
@@ -150,5 +156,25 @@ message GroupEntry {
     repeated string globalPerms = 3;
     repeated string serverPerms = 4;
 }
+message PermissionEntry {
+    string serverName = 1;
+    repeated string permissions = 2;
+}
+
 message FetchGroupsRequest { string serverName = 1; }
 message FetchGroupsResponse { repeated GroupEntry groups = 1; }
+
+message CreateGroupRequest {
+    string groupName = 1;
+    string groupPrefix = 2;
+    repeated PermissionEntry permsEntry = 3;
+ }
+//Empty//
+
+message RemoveGroupRequest { string groupName = 1; }
+//Empty//
+
+message AddPermissionRequest { string groupName = 1; string target = 2; repeated string permissions = 3; }
+//Empty//
+
+message RemovePermissionRequest { string groupName = 1; string target = 2; repeated string permissions = 3; }

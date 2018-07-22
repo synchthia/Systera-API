@@ -15,14 +15,6 @@ type GroupData struct {
 	Permissions map[string][]string `bson:"permissions"`
 }
 
-// GroupPerms - Group Permission
-type GroupPerms struct {
-	Name        string
-	Prefix      string
-	GlobalPerms []string
-	ServerPerms []string
-}
-
 // FindGroupData - Find Group Entry
 func FindGroupData() ([]GroupData, error) {
 	if _, err := GetMongoSession(); err != nil {
@@ -43,8 +35,8 @@ func FindGroupData() ([]GroupData, error) {
 	return groups, nil
 }
 
-// AddGroup - Create New Group
-func AddGroup(name string, prefix string) error {
+// CreateGroup - Create New Group
+func CreateGroup(groupData GroupData) error {
 	if _, err := GetMongoSession(); err != nil {
 		return err
 	}
@@ -53,20 +45,86 @@ func AddGroup(name string, prefix string) error {
 	defer session.Close()
 	coll := session.DB("systera").C("groups")
 
-	groupLen, findErr := coll.Find(bson.M{"name": name}).Count()
-	if groupLen != 0 {
-		return errors.New("group already exists")
-	}
+	groupLen, findErr := coll.Find(bson.M{"name": groupData.Name}).Count()
 	if findErr != nil {
 		return findErr
 	}
-
-	group := GroupData{
-		Name:   name,
-		Prefix: prefix,
+	if groupLen != 0 {
+		return errors.New("group already exists")
 	}
 
-	err := coll.Insert(&group)
+	err := coll.Insert(&groupData)
 
+	return err
+}
+
+// RemoveGroup - Remove Group
+func RemoveGroup(groupName string) error {
+	if _, err := GetMongoSession(); err != nil {
+		return err
+	}
+
+	session := session.Copy()
+	defer session.Close()
+	coll := session.DB("systera").C("groups")
+
+	groupLen, findErr := coll.Find(bson.M{"name": groupName}).Count()
+	if findErr != nil {
+		return findErr
+	}
+	if groupLen == 0 {
+		return errors.New("group not exists")
+	}
+
+	err := coll.Remove(bson.M{"name": groupName})
+
+	return err
+}
+
+// AddPermission - Add Permission
+func AddPermission(groupName, target string, permissions []string) error {
+	if _, err := GetMongoSession(); err != nil {
+		return err
+	}
+
+	session := session.Copy()
+	defer session.Close()
+	coll := session.DB("systera").C("groups")
+
+	cnt, cntErr := coll.Find(bson.M{"name": groupName}).Count()
+	if cntErr != nil {
+		return cntErr
+	}
+	if cnt == 0 {
+		return errors.New("group not exists")
+	}
+
+	err := coll.Update(
+		bson.M{"name": groupName},
+		bson.M{"$addToSet": bson.M{"permissions." + target: bson.M{"$each": permissions}}},
+	)
+	return err
+}
+
+// RemovePermission - Remove Permission
+func RemovePermission(groupName, target string, permissions []string) error {
+	if _, err := GetMongoSession(); err != nil {
+		return err
+	}
+
+	session := session.Copy()
+	defer session.Close()
+	coll := session.DB("systera").C("groups")
+
+	query := coll.Find(bson.M{"name": groupName})
+	cnt, cntErr := query.Count()
+	if cntErr != nil {
+		return cntErr
+	}
+	if cnt == 0 {
+		return errors.New("group not exists")
+	}
+
+	err := coll.Update(bson.M{"name": groupName}, bson.M{"$pull": bson.M{"permissions." + target: bson.M{"$in": permissions}}})
 	return err
 }
