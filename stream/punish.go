@@ -12,15 +12,33 @@ func PublishPunish(data *systerapb.PunishEntry) {
 	c := pool.Get()
 	defer c.Close()
 
-	d := &systerapb.PunishEntryStream{
-		Type:  systerapb.PunishEntryStream_PUNISH,
-		Entry: data,
+	d := &systerapb.PunishmentStream{
+		Type:        systerapb.PunishmentStream_PUNISH,
+		PunishEntry: data,
 	}
 	serialized, _ := json.Marshal(&d)
 	logrus.Debugln(d)
 
-	_, err := c.Do("PUBLISH", "systera.punish", string(serialized))
+	_, err := c.Do("PUBLISH", "systera.punishment.global", string(serialized))
 	if err != nil {
 		logrus.WithError(err).Errorf("[Publish] Failed Publish Punishment")
+	}
+}
+
+// PublishReport - Publish Report
+func PublishReport(data *systerapb.ReportEntry) {
+	c := pool.Get()
+	defer c.Close()
+
+	d := &systerapb.PunishmentStream{
+		Type:        systerapb.PunishmentStream_REPORT,
+		ReportEntry: data,
+	}
+	serialized, _ := json.Marshal(&d)
+	logrus.Debugln(d)
+
+	_, err := c.Do("PUBLISH", "systera.punishment.global", string(serialized))
+	if err != nil {
+		logrus.WithError(err).Errorf("[Publish] Failed Publish Report")
 	}
 }

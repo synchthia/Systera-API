@@ -235,7 +235,7 @@ func (s *grpcServer) Report(ctx context.Context, e *pb.ReportRequest) (*pb.Repor
 }
 
 func (s *grpcServer) FetchGroups(ctx context.Context, e *pb.FetchGroupsRequest) (*pb.FetchGroupsResponse, error) {
-	groups, err := database.FindGroupData()
+	groups, err := database.GetAllGroup()
 
 	var allGroups []*pb.GroupEntry
 	for _, group := range groups {
@@ -258,6 +258,18 @@ func (s *grpcServer) CreateGroup(ctx context.Context, e *pb.CreateGroupRequest) 
 	d.Permissions = dbPerms
 
 	err := database.CreateGroup(d)
+	if err != nil {
+		return &pb.Empty{}, err
+	}
+
+	if dbPerms != nil {
+		for sv := range dbPerms {
+			stream.PublishGroup(s.GroupData_DBtoPB(sv, d))
+		}
+	} else {
+		stream.PublishGroup(s.GroupData_DBtoPB("", d))
+	}
+
 	return &pb.Empty{}, err
 }
 
@@ -268,11 +280,17 @@ func (s *grpcServer) RemoveGroup(ctx context.Context, e *pb.RemoveGroupRequest) 
 
 func (s *grpcServer) AddPermission(ctx context.Context, e *pb.AddPermissionRequest) (*pb.Empty, error) {
 	err := database.AddPermission(e.GroupName, e.Target, e.Permissions)
+	data, err := database.GetGroupData(e.GroupName)
+	stream.PublishPerms(e.Target, s.GroupData_DBtoPB(e.Target, data))
+
 	return &pb.Empty{}, err
 }
 
 func (s *grpcServer) RemovePermission(ctx context.Context, e *pb.RemovePermissionRequest) (*pb.Empty, error) {
 	err := database.RemovePermission(e.GroupName, e.Target, e.Permissions)
+	data, err := database.GetGroupData(e.GroupName)
+	stream.PublishPerms(e.Target, s.GroupData_DBtoPB(e.Target, data))
+
 	return &pb.Empty{}, err
 }
 
@@ -286,10 +304,14 @@ func (s *grpcServer) PlayerData_DBtoPB(dbEntry database.PlayerData) *pb.PlayerEn
 }
 
 func (s *grpcServer) GroupData_DBtoPB(serverName string, dbEntry database.GroupData) *pb.GroupEntry {
-	return &pb.GroupEntry{
+	e := &pb.GroupEntry{
 		GroupName:   dbEntry.Name,
 		GroupPrefix: dbEntry.Prefix,
 		GlobalPerms: dbEntry.Permissions["global"],
-		ServerPerms: dbEntry.Permissions[serverName],
 	}
+	if serverName != "" {
+		e.ServerPerms = dbEntry.Permissions[serverName]
+	}
+
+	return e
 }

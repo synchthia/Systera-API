@@ -15,8 +15,27 @@ type GroupData struct {
 	Permissions map[string][]string `bson:"permissions"`
 }
 
-// FindGroupData - Find Group Entry
-func FindGroupData() ([]GroupData, error) {
+// GetGroupData - Get Group Entry
+func GetGroupData(name string) (GroupData, error) {
+	if _, err := GetMongoSession(); err != nil {
+		return GroupData{}, err
+	}
+
+	session := session.Copy()
+	defer session.Close()
+	coll := session.DB("systera").C("groups")
+
+	group := GroupData{}
+	err := coll.Find(bson.M{"name": name}).One(&group)
+	if err != nil {
+		logrus.WithError(err).Errorf("[Group] Failed Find GroupData: %s", err)
+		return GroupData{}, err
+	}
+	return group, nil
+}
+
+// GetAllGroup - Find All Group Entry
+func GetAllGroup() ([]GroupData, error) {
 	if _, err := GetMongoSession(); err != nil {
 		return nil, err
 	}

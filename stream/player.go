@@ -13,8 +13,8 @@ func PublishPlayerGroups(target string, data *systerapb.PlayerEntry) {
 	c := pool.Get()
 	defer c.Close()
 
-	d := &systerapb.PlayerEntryStream{
-		Type:  systerapb.PlayerEntryStream_GROUPS,
+	d := &systerapb.PlayerStream{
+		Type:  systerapb.PlayerStream_GROUPS,
 		Entry: data,
 	}
 	serialized, _ := json.Marshal(&d)

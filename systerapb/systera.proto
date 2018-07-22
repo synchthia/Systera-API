@@ -58,7 +58,7 @@ message SystemStream {
 }
 
 // Player
-message PlayerEntryStream {
+message PlayerStream {
     enum Type {
       ALL = 0;
       GROUPS = 1;
@@ -69,21 +69,24 @@ message PlayerEntryStream {
 }
 
 // Punishment
-message PunishEntryStream {
+message PunishmentStream {
     enum Type {
         PUNISH = 0;
+        REPORT = 1;
     }
     Type type = 1;
-    PunishEntry entry = 2;
+    PunishEntry punishEntry = 2;
+    ReportEntry reportEntry = 3;
 }
 
-// Report
-message ReportEntryStream {
+// Group
+message GroupStream {
     enum Type {
-        REPORT = 0;
+        GROUP = 0;
+        PERMISSIONS = 1;
     }
     Type type = 1;
-    ReportEntry entry = 2;
+    GroupEntry groupEntry = 2;
 }
 
 /*
@@ -156,7 +159,7 @@ message GroupEntry {
     repeated string globalPerms = 3;
     repeated string serverPerms = 4;
 }
-message PermissionEntry {
+message PermissionsEntry {
     string serverName = 1;
     repeated string permissions = 2;
 }
@@ -167,7 +170,7 @@ message FetchGroupsResponse { repeated GroupEntry groups = 1; }
 message CreateGroupRequest {
     string groupName = 1;
     string groupPrefix = 2;
-    repeated PermissionEntry permsEntry = 3;
+    repeated PermissionsEntry permsEntry = 3;
  }
 //Empty//
 
