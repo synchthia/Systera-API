@@ -92,11 +92,19 @@ message GroupStream {
 /*
  * PLAYER PROFILE
  */
+
+message PlayerStats {
+    string currentServer = 1;
+    int64 firstLogin = 2;
+    int64 lastLogin = 3;
+}
+
 message PlayerEntry {
     string playerUUID = 1;
     string playerName = 2;
     repeated string groups = 3;
     map<string, bool> settings = 4;
+    PlayerStats stats = 5;
 }
 
 message InitPlayerProfileRequest { string playerUUID = 1; string playerName = 2; string playerIPAddress = 3; string playerHostname = 4; }

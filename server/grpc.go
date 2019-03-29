@@ -300,6 +300,11 @@ func (s *grpcServer) PlayerData_DBtoPB(dbEntry database.PlayerData) *pb.PlayerEn
 		PlayerName: dbEntry.Name,
 		Groups:     dbEntry.Groups,
 		Settings:   util.StructToBoolMap(dbEntry.Settings),
+		Stats: &pb.PlayerStats{
+			CurrentServer: dbEntry.Stats.CurrentServer,
+			FirstLogin:    dbEntry.Stats.FirstLogin,
+			LastLogin:     dbEntry.Stats.LastLogin,
+		},
 	}
 }
 
