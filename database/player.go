@@ -12,18 +12,16 @@ import (
 
 // PlayerData - PlayerProfile on Database
 type PlayerData struct {
-	ID                 bson.ObjectId    `bson:"_id,omitempty"`
-	UUID               string           `bson:"uuid" json:"id"`
-	Name               string           `bson:"name"`
-	NameLower          string           `bson:"name_lower"`
-	Groups             []string         `bson:"groups"`
-	Stats              PlayerStats      `bson:"stats"`
-	KnownUsernames     map[string]int64 `bson:"known_usernames"`
-	KnownUsernameLower map[string]int64 `bson:"known_usernames_lower"`
-	// KnownAddresses     map[string]PlayerAddresses `bson:"known_addresses"`
-	KnownAddresses    []PlayerAddresses `bson:"known_addresses"`
-	NewKnownAddresses []PlayerAddresses `bson:"new_known_addresses"`
-	Settings          PlayerSettings    `bson:"settings"`
+	ID                 bson.ObjectId     `bson:"_id,omitempty"`
+	UUID               string            `bson:"uuid" json:"id"`
+	Name               string            `bson:"name"`
+	NameLower          string            `bson:"name_lower"`
+	Groups             []string          `bson:"groups"`
+	Stats              PlayerStats       `bson:"stats"`
+	KnownUsernames     map[string]int64  `bson:"known_usernames"`
+	KnownUsernameLower map[string]int64  `bson:"known_usernames_lower"`
+	KnownAddresses     []PlayerAddresses `bson:"known_addresses"`
+	Settings           PlayerSettings    `bson:"settings"`
 }
 
 // PlayerStats - Stats in PlayerProfile
@@ -165,24 +163,25 @@ func Migrate() {
 	// 	coll.Update(bson.M{"uuid": e.UUID}, bson.M{"$set": bson.M{"new_known_addresses": pas}})
 	// }
 
-	for _, e := range playerData {
-		var pas []PlayerAddresses
-		for _, v := range e.NewKnownAddresses {
-			logrus.WithFields(logrus.Fields{
-				"Address":  v.Address,
-				"Hostname": v.Hostname,
-				"Date":     time.Unix(v.Date/1000, 0).Format("2006-01-02 15:04:05"),
-			}).Infof("[%s]", e.Name)
-			pa := PlayerAddresses{
-				Address:  v.Address,
-				Hostname: v.Hostname,
-				Date:     v.Date,
-			}
-			pas = append(pas, pa)
-		}
-		coll.Update(bson.M{"uuid": e.UUID}, bson.M{"$set": bson.M{"known_addresses": pas}})
-	}
+	// for _, e := range playerData {
+	// 	var pas []PlayerAddresses
+	// 	for _, v := range e.NewKnownAddresses {
+	// 		logrus.WithFields(logrus.Fields{
+	// 			"Address":  v.Address,
+	// 			"Hostname": v.Hostname,
+	// 			"Date":     time.Unix(v.Date/1000, 0).Format("2006-01-02 15:04:05"),
+	// 		}).Infof("[%s]", e.Name)
+	// 		pa := PlayerAddresses{
+	// 			Address:  v.Address,
+	// 			Hostname: v.Hostname,
+	// 			Date:     v.Date,
+	// 		}
+	// 		pas = append(pas, pa)
+	// 	}
+	// 	coll.Update(bson.M{"uuid": e.UUID}, bson.M{"$set": bson.M{"known_addresses": pas}})
+	// }
 
+	coll.Update(bson.M{}, bson.M{"$unset": bson.M{"new_known_addresses": 1}})
 	// Test (Altlookup)
 	// coll.Find(bson.M{"uuid": e.UUID})
 	playerData2 := []PlayerData{}
@@ -235,11 +234,20 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
 	}
 
 	// User Log (Address / Name)
-	playerData.KnownAddresses = append(playerData.KnownAddresses, PlayerAddresses{
-		Address:  ipAddress,
-		Hostname: hostname,
-		Date:     nowtime,
-	})
+	var newPlayerAddresses []PlayerAddresses
+	for _, playerAddress := range playerData.KnownAddresses {
+		if ipAddress == playerAddress.Address {
+			newPlayerAddresses = append(newPlayerAddresses, PlayerAddresses{
+				Address:  ipAddress,
+				Hostname: hostname,
+				Date:     nowtime,
+			})
+		} else {
+			newPlayerAddresses = append(newPlayerAddresses, playerAddress)
+		}
+	}
+
+	playerData.KnownAddresses = newPlayerAddresses
 	playerData.KnownUsernames[name] = nowtime
 	playerData.KnownUsernameLower[strings.ToLower(name)] = nowtime
 
