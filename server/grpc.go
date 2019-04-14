@@ -26,6 +26,8 @@ type Server interface {
 	SetPlayerServer(playerUUID, serverName string) error
 	SetPlayerSettings(playerUUID, key string, value bool) error
 
+	AltLookup(playerUUID string) ([]pb.AltLookupEntry, error)
+
 	GetPlayerPunish(playerUUID string, filterLevel pb.PunishLevel, includeExpired bool) []pb.PunishEntry
 	SetPlayerPunish(force bool, entry pb.PunishEntry) (bool, bool, bool, bool, error)
 
@@ -132,6 +134,14 @@ func (s *grpcServer) RemovePlayerServer(ctx context.Context, e *pb.RemovePlayerS
 func (s *grpcServer) SetPlayerSettings(ctx context.Context, e *pb.SetPlayerSettingsRequest) (*pb.Empty, error) {
 	err := database.PushPlayerSettings(e.PlayerUUID, e.Key, e.Value)
 	return &pb.Empty{}, err
+}
+
+func (s *grpcServer) AltLookup(ctx context.Context, e *pb.AltLookupRequest) (*pb.AltLookupResponse, error) {
+	return &pb.AltLookupResponse{}, nil
+}
+
+func (s *grpcServer) AltLookupByName(ctx context.Context, e *pb.AltLookupByNameRequest) (*pb.AltLookupResponse, error) {
+	return &pb.AltLookupResponse{}, nil
 }
 
 func (s *grpcServer) GetPlayerPunish(ctx context.Context, e *pb.GetPlayerPunishRequest) (*pb.GetPlayerPunishResponse, error) {

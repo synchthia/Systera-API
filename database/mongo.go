@@ -39,6 +39,8 @@ func NewMongoSession(address string) {
 	genCollWithIndex("players", []string{"-uuid", "-name", "-name_lower"})
 	genCollWithIndex("groups", []string{"name"})
 	genCollWithIndex("punishments", []string{"punished_to.uuid"})
+
+	Migrate()
 }
 
 func genCollWithIndex(collName string, keys []string) {
