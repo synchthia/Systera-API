@@ -12,17 +12,18 @@ import (
 
 // PlayerData - PlayerProfile on Database
 type PlayerData struct {
-	ID                 bson.ObjectId              `bson:"_id,omitempty"`
-	UUID               string                     `bson:"uuid" json:"id"`
-	Name               string                     `bson:"name"`
-	NameLower          string                     `bson:"name_lower"`
-	Groups             []string                   `bson:"groups"`
-	Stats              PlayerStats                `bson:"stats"`
-	KnownUsernames     map[string]int64           `bson:"known_usernames"`
-	KnownUsernameLower map[string]int64           `bson:"known_usernames_lower"`
-	KnownAddresses     map[string]PlayerAddresses `bson:"known_addresses"`
-	NewKnownAddresses  []PlayerAddresses          `bson:"new_known_addresses"`
-	Settings           PlayerSettings             `bson:"settings"`
+	ID                 bson.ObjectId    `bson:"_id,omitempty"`
+	UUID               string           `bson:"uuid" json:"id"`
+	Name               string           `bson:"name"`
+	NameLower          string           `bson:"name_lower"`
+	Groups             []string         `bson:"groups"`
+	Stats              PlayerStats      `bson:"stats"`
+	KnownUsernames     map[string]int64 `bson:"known_usernames"`
+	KnownUsernameLower map[string]int64 `bson:"known_usernames_lower"`
+	// KnownAddresses     map[string]PlayerAddresses `bson:"known_addresses"`
+	KnownAddresses    []PlayerAddresses `bson:"known_addresses"`
+	NewKnownAddresses []PlayerAddresses `bson:"new_known_addresses"`
+	Settings          PlayerSettings    `bson:"settings"`
 }
 
 // PlayerStats - Stats in PlayerProfile
@@ -146,9 +147,27 @@ func Migrate() {
 	coll := session.DB("systera").C("players")
 	coll.Find(bson.M{}).All(&playerData)
 
+	// for _, e := range playerData {
+	// 	var pas []PlayerAddresses
+	// 	for _, v := range e.KnownAddresses {
+	// 		logrus.WithFields(logrus.Fields{
+	// 			"Address":  v.Address,
+	// 			"Hostname": v.Hostname,
+	// 			"Date":     time.Unix(v.Date/1000, 0).Format("2006-01-02 15:04:05"),
+	// 		}).Infof("[%s]", e.Name)
+	// 		pa := PlayerAddresses{
+	// 			Address:  v.Address,
+	// 			Hostname: v.Hostname,
+	// 			Date:     v.Date,
+	// 		}
+	// 		pas = append(pas, pa)
+	// 	}
+	// 	coll.Update(bson.M{"uuid": e.UUID}, bson.M{"$set": bson.M{"new_known_addresses": pas}})
+	// }
+
 	for _, e := range playerData {
 		var pas []PlayerAddresses
-		for _, v := range e.KnownAddresses {
+		for _, v := range e.NewKnownAddresses {
 			logrus.WithFields(logrus.Fields{
 				"Address":  v.Address,
 				"Hostname": v.Hostname,
@@ -161,13 +180,13 @@ func Migrate() {
 			}
 			pas = append(pas, pa)
 		}
-		coll.Update(bson.M{"uuid": e.UUID}, bson.M{"$set": bson.M{"new_known_addresses": pas}})
+		coll.Update(bson.M{"uuid": e.UUID}, bson.M{"$set": bson.M{"known_addresses": pas}})
 	}
 
 	// Test (Altlookup)
 	// coll.Find(bson.M{"uuid": e.UUID})
 	playerData2 := []PlayerData{}
-	coll.Find(bson.M{"new_known_addresses.address": "172.18.0.1"}).All(&playerData2)
+	coll.Find(bson.M{"known_addresses.address": "172.18.0.1"}).All(&playerData2)
 	for _, v := range playerData2 {
 		logrus.Printf("[Result] %s", v.Name)
 	}
@@ -197,7 +216,7 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
 		// Initialize
 		playerData.KnownUsernames = make(map[string]int64)
 		playerData.KnownUsernameLower = make(map[string]int64)
-		playerData.KnownAddresses = make(map[string]PlayerAddresses)
+		// playerData.KnownAddresses = make([]PlayerAddresses)
 
 		playerData.Stats.FirstLogin = nowtime
 	} else {
@@ -216,11 +235,11 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
 	}
 
 	// User Log (Address / Name)
-	playerData.KnownAddresses[strings.NewReplacer(".", "_").Replace(ipAddress)] = PlayerAddresses{
+	playerData.KnownAddresses = append(playerData.KnownAddresses, PlayerAddresses{
 		Address:  ipAddress,
 		Hostname: hostname,
 		Date:     nowtime,
-	}
+	})
 	playerData.KnownUsernames[name] = nowtime
 	playerData.KnownUsernameLower[strings.ToLower(name)] = nowtime
 
