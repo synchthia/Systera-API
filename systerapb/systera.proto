@@ -131,7 +131,8 @@ message AltLookupResponse { repeated AltLookupEntry entry = 1; }
 message AltLookupEntry {
     string address = 1;
     string hostname = 2;
-    int64 date = 3;
+    int64 firstSeen = 3;
+    int64 lastSeen = 4;
 }
 
 /*

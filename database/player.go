@@ -39,9 +39,11 @@ type PlayerSettings struct {
 
 // PlayerAddresses - Player Address Entries
 type PlayerAddresses struct {
-	Address  string `bson:"address"`
-	Hostname string `bson:"hostname"`
-	Date     int64  `bson:"date"`
+	Address   string `bson:"address"`
+	Hostname  string `bson:"hostname"`
+	Date      int64  `bson:"date,omitempty"`
+	FirstSeen int64  `bson:"first_seen"`
+	LastSeen  int64  `bson:"last_seen"`
 }
 
 // PlayerIdentity - Player Data Set (Used from ex. punishment, report...)
@@ -143,51 +145,29 @@ func Migrate() {
 	session := session.Copy()
 	defer session.Close()
 	coll := session.DB("systera").C("players")
-	coll.Find(bson.M{}).All(&playerData)
+	coll.Find(bson.M{"known_addresses.date": bson.M{"$exists": true}}).All(&playerData)
 
-	// for _, e := range playerData {
-	// 	var pas []PlayerAddresses
-	// 	for _, v := range e.KnownAddresses {
-	// 		logrus.WithFields(logrus.Fields{
-	// 			"Address":  v.Address,
-	// 			"Hostname": v.Hostname,
-	// 			"Date":     time.Unix(v.Date/1000, 0).Format("2006-01-02 15:04:05"),
-	// 		}).Infof("[%s]", e.Name)
-	// 		pa := PlayerAddresses{
-	// 			Address:  v.Address,
-	// 			Hostname: v.Hostname,
-	// 			Date:     v.Date,
-	// 		}
-	// 		pas = append(pas, pa)
-	// 	}
-	// 	coll.Update(bson.M{"uuid": e.UUID}, bson.M{"$set": bson.M{"new_known_addresses": pas}})
-	// }
+	for _, v := range playerData {
+		var newKnownAddress []PlayerAddresses
+		for _, e := range v.KnownAddresses {
+			if e.Date != 0 {
+				e.FirstSeen = e.Date
+				e.LastSeen = e.Date
+				e.Date = 0
+				logrus.Printf("[I] %s/ %d / %d", v.Name, e.Date, e.FirstSeen)
+				newKnownAddress = append(newKnownAddress, e)
+			}
+		}
 
-	// for _, e := range playerData {
-	// 	var pas []PlayerAddresses
-	// 	for _, v := range e.NewKnownAddresses {
-	// 		logrus.WithFields(logrus.Fields{
-	// 			"Address":  v.Address,
-	// 			"Hostname": v.Hostname,
-	// 			"Date":     time.Unix(v.Date/1000, 0).Format("2006-01-02 15:04:05"),
-	// 		}).Infof("[%s]", e.Name)
-	// 		pa := PlayerAddresses{
-	// 			Address:  v.Address,
-	// 			Hostname: v.Hostname,
-	// 			Date:     v.Date,
-	// 		}
-	// 		pas = append(pas, pa)
-	// 	}
-	// 	coll.Update(bson.M{"uuid": e.UUID}, bson.M{"$set": bson.M{"known_addresses": pas}})
-	// }
+		for _, k := range newKnownAddress {
+			logrus.Printf("[F] %s: %d / %d", v.Name, k.Date, k.FirstSeen)
+		}
 
-	coll.Update(bson.M{}, bson.M{"$unset": bson.M{"new_known_addresses": 1}})
-	// Test (Altlookup)
-	// coll.Find(bson.M{"uuid": e.UUID})
-	playerData2 := []PlayerData{}
-	coll.Find(bson.M{"known_addresses.address": "172.18.0.1"}).All(&playerData2)
-	for _, v := range playerData2 {
-		logrus.Printf("[Result] %s", v.Name)
+		v.KnownAddresses = newKnownAddress
+		_, err := coll.Upsert(bson.M{"uuid": v.UUID}, v)
+		if err != nil {
+			logrus.WithError(err)
+		}
 	}
 }
 
@@ -215,8 +195,6 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
 		// Initialize
 		playerData.KnownUsernames = make(map[string]int64)
 		playerData.KnownUsernameLower = make(map[string]int64)
-		// playerData.KnownAddresses = make([]PlayerAddresses)
-
 		playerData.Stats.FirstLogin = nowtime
 	} else {
 		coll.Find(bson.M{"uuid": uuid}).One(&playerData)
@@ -234,20 +212,33 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
 	}
 
 	// User Log (Address / Name)
+	override := false
 	var newPlayerAddresses []PlayerAddresses
-	for _, playerAddress := range playerData.KnownAddresses {
-		if ipAddress == playerAddress.Address {
+	for _, v := range playerData.KnownAddresses {
+		if v.Address == ipAddress {
 			newPlayerAddresses = append(newPlayerAddresses, PlayerAddresses{
-				Address:  ipAddress,
-				Hostname: hostname,
-				Date:     nowtime,
+				Address:   ipAddress,
+				Hostname:  hostname,
+				FirstSeen: v.FirstSeen,
+				LastSeen:  nowtime,
 			})
+			override = true
 		} else {
-			newPlayerAddresses = append(newPlayerAddresses, playerAddress)
+			newPlayerAddresses = append(newPlayerAddresses, v)
 		}
 	}
 
+	if !override {
+		newPlayerAddresses = append(newPlayerAddresses, PlayerAddresses{
+			Address:   ipAddress,
+			Hostname:  hostname,
+			FirstSeen: nowtime,
+			LastSeen:  nowtime,
+		})
+	}
+
 	playerData.KnownAddresses = newPlayerAddresses
+
 	playerData.KnownUsernames[name] = nowtime
 	playerData.KnownUsernameLower[strings.ToLower(name)] = nowtime
 
