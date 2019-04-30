@@ -24,7 +24,6 @@ service Systera {
     rpc SetPlayerSettings(SetPlayerSettingsRequest) returns (Empty);
 
     rpc AltLookup(AltLookupRequest) returns (AltLookupResponse);
-    rpc AltLookupByName(AltLookupByNameRequest) returns (AltLookupResponse);
 
     rpc GetPlayerPunish(GetPlayerPunishRequest) returns (GetPlayerPunishResponse) {}
     rpc SetPlayerPunish(SetPlayerPunishRequest) returns (SetPlayerPunishResponse) {}
@@ -124,16 +123,23 @@ message RemovePlayerServerRequest { string playerUUID = 1; string serverName = 2
 
 message SetPlayerSettingsRequest { string playerUUID = 1; string key = 2; bool value = 3; }
 
-message AltLookupRequest { string playerUUID = 1; }
-message AltLookupByNameRequest { string playerName = 1; }
-message AltLookupResponse { repeated AltLookupEntry entry = 1; }
-
-message AltLookupEntry {
+/*
+ * ALT LOOKUP
+ */
+message AddressesEntry {
     string address = 1;
     string hostname = 2;
     int64 firstSeen = 3;
     int64 lastSeen = 4;
 }
+message AltLookupEntry {
+    string uuid = 1;
+    string name = 2;
+    repeated AddressesEntry addresses = 3;
+}
+message AltLookupRequest { string playerUUID = 1; }
+message AltLookupResponse { repeated AltLookupEntry entries = 1; }
+
 
 /*
  * PLAYER PUNISHMENTS

@@ -137,11 +137,31 @@ func (s *grpcServer) SetPlayerSettings(ctx context.Context, e *pb.SetPlayerSetti
 }
 
 func (s *grpcServer) AltLookup(ctx context.Context, e *pb.AltLookupRequest) (*pb.AltLookupResponse, error) {
-	return &pb.AltLookupResponse{}, nil
-}
+	result, err := database.AltLookup(e.PlayerUUID)
+	if err != nil {
+		return &pb.AltLookupResponse{}, err
+	}
 
-func (s *grpcServer) AltLookupByName(ctx context.Context, e *pb.AltLookupByNameRequest) (*pb.AltLookupResponse, error) {
-	return &pb.AltLookupResponse{}, nil
+	var entry []*pb.AltLookupEntry
+	for _, r := range result {
+		var aEntry []*pb.AddressesEntry
+		for _, a := range r.Addresses {
+			aEntry = append(aEntry, &pb.AddressesEntry{
+				Address: a.Address,
+				Hostname: a.Hostname,
+				FirstSeen: a.FirstSeen,
+				LastSeen: a.LastSeen,
+			})
+		}
+
+		entry = append(entry, &pb.AltLookupEntry{
+			Uuid: r.UUID,
+			Name: r.Name,
+			Addresses: aEntry,
+		})
+	}
+
+	return &pb.AltLookupResponse{Entries: entry}, err
 }
 
 func (s *grpcServer) GetPlayerPunish(ctx context.Context, e *pb.GetPlayerPunishRequest) (*pb.GetPlayerPunishResponse, error) {

@@ -46,6 +46,13 @@ type PlayerAddresses struct {
 	LastSeen  int64  `bson:"last_seen"`
 }
 
+// AltLookupData - AltLookup Result
+type AltLookupData struct {
+	UUID      string            `bson:"uuid"`
+	Name      string            `bson:"name"`
+	Addresses []PlayerAddresses `bson:"addresses"`
+}
+
 // PlayerIdentity - Player Data Set (Used from ex. punishment, report...)
 type PlayerIdentity struct {
 	UUID string `bson:"uuid"`
@@ -135,40 +142,7 @@ func FindPlayerByName(name string) (PlayerData, error) {
 
 // Migrate
 func Migrate() {
-	logrus.Infof("[MIGRATE] Migrate Initializing...")
-
-	if _, err := GetMongoSession(); err != nil {
-		return
-	}
-
-	playerData := []PlayerData{}
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
-	coll.Find(bson.M{"known_addresses.date": bson.M{"$exists": true}}).All(&playerData)
-
-	for _, v := range playerData {
-		var newKnownAddress []PlayerAddresses
-		for _, e := range v.KnownAddresses {
-			if e.Date != 0 {
-				e.FirstSeen = e.Date
-				e.LastSeen = e.Date
-				e.Date = 0
-				logrus.Printf("[I] %s/ %d / %d", v.Name, e.Date, e.FirstSeen)
-				newKnownAddress = append(newKnownAddress, e)
-			}
-		}
-
-		for _, k := range newKnownAddress {
-			logrus.Printf("[F] %s: %d / %d", v.Name, k.Date, k.FirstSeen)
-		}
-
-		v.KnownAddresses = newKnownAddress
-		_, err := coll.Upsert(bson.M{"uuid": v.UUID}, v)
-		if err != nil {
-			logrus.WithError(err)
-		}
-	}
+	// Some Migration are here...
 }
 
 // InitPlayerProfile - Initialize Player Profile
@@ -317,12 +291,64 @@ func PushPlayerSettings(uuid, key string, value bool) error {
 	return nil
 }
 
-// AltLookup - AltLookup player accounts
-func AltLookup() {
-
+// MatchPlayerAddress - Return Matched Address in Array
+func MatchPlayerAddress(playerAddresses []PlayerAddresses, address string) PlayerAddresses {
+	for _, v := range playerAddresses {
+		if v.Address == address {
+			return v
+		}
+	}
+	return PlayerAddresses{}
 }
 
-// AltLookupByName - AltLookup player's Name
-func AltLookupByName(playerName string) {
+// AltLookup - AltLookup player accounts
+func AltLookup(uuid string) ([]AltLookupData, error) {
+	if _, err := GetMongoSession(); err != nil {
+		return nil, err
+	}
 
+	session := session.Copy()
+	defer session.Close()
+	coll := session.DB("systera").C("players")
+
+	playerData := PlayerData{}
+
+	var altLookupData []AltLookupData
+	//playerAddressPair := make(map[string][]PlayerAddresses)
+	altLookupPair := make(map[string]AltLookupData)
+
+	// Find Player
+	err := coll.Find(bson.M{"uuid": uuid}).One(&playerData)
+	if err != nil {
+		return nil, err
+	}
+
+	// Player's KnownAddresses
+	for _, ipEntry := range playerData.KnownAddresses {
+		var altPlayerData []PlayerData
+
+		err := coll.Find(bson.M{"known_addresses.address": ipEntry.Address}).All(&altPlayerData)
+		if err != nil {
+			continue
+		}
+
+		// Loop in Found PlayerData
+		for _, pd := range altPlayerData {
+			if pd.UUID == uuid {
+				continue
+			}
+
+			altLookupPair[pd.UUID] = AltLookupData{
+				UUID: pd.UUID,
+				Name: pd.Name,
+				Addresses: append(altLookupPair[pd.UUID].Addresses, MatchPlayerAddress(pd.KnownAddresses, ipEntry.Address)),
+			}
+		}
+	}
+
+	for _, v := range altLookupPair {
+		altLookupData = append(altLookupData, v)
+	}
+
+	return altLookupData, nil
 }
