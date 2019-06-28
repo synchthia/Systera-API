@@ -20,6 +20,6 @@ steps:
       - |
         mkdir -p $$HOME/.m2/
         echo "$$CI_MVN_SETTINGS" > $$HOME/.m2/settings.xml
-        sh ./systerapb/make-java.sh deploy
+        bash ./systerapb/make-java.sh deploy
 images:
   - "gcr.io/startail-io/systera-api"
