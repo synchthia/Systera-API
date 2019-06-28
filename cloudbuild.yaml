@@ -22,5 +22,7 @@ steps:
     args:
       - -c
       - |
-        bash ./.ci/extract-maven-settings.sh
+        set -e
+        mkdir -p $$MAVEN_CONFIG
+        source .env && echo -n "$${CI_MVN_SETTINGS}" > $$MAVEN_CONFIG/settings.xml
         bash ./systerapb/make-java.sh deploy
