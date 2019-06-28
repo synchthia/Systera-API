@@ -17,7 +17,7 @@ steps:
       - -c
       - |
         mkdir -p /go/src &7 ln -s /workspace /go/src/github.com
-        echo "$$CI_MVN_SETTINGS" > $HOME/.m2/settings.xml
+        echo "$$CI_MVN_SETTINGS" > $$HOME/.m2/settings.xml
         mkdir -p ./java/src/main/proto && cp -Rfv ./*.proto ./java/src/main/proto/
         cd java
         mvn clean deploy
