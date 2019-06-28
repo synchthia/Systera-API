@@ -12,3 +12,4 @@ if [ ! -e $PWD/.env ]; then
 fi
 source .env
 echo -n ${CI_MVN_SETTINGS} > $HOME/.m2/settings.xml
+cat $HOME/.m2/settings.xml
