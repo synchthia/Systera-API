@@ -1,5 +1,5 @@
 substitutions:
-  _KEY_NAME: "systera-api-dotenv"
+  _KEY_NAME: "systera-api-env"
 
 steps:
   - id: 'extract-env'
