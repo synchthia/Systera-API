@@ -9,7 +9,7 @@ mkdir -p $EXPORTDIR
 cp -Rfv $BASEMENT/*.proto $EXPORTDIR/
 cd java
 if [ "$1" == "deploy" ]; then
-    mvn clean deploy
+    mvn clean deploy -DrepositoryId=synchthia-repo
 else
     mvn clean install
 fi

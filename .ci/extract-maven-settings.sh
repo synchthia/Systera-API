@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "$(dirname "$0")"/..
+cd "$(dirname "$0")"/..
 
 if [ ! -e $HOME/.m2/ ]; then
     mkdir $HOME/.m2/
@@ -12,4 +12,3 @@ if [ ! -e $PWD/.env ]; then
 fi
 source .env
 echo -n ${CI_MVN_SETTINGS} > $HOME/.m2/settings.xml
-cat $HOME/.m2/settings.xml
