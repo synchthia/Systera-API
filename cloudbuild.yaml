@@ -22,8 +22,5 @@ steps:
     args:
       - -c
       - |
-        source .env
-        mkdir -p $$HOME/.m2/
-        echo -n "\$$CI_MVN_SETTINGS" > $$HOME/.m2/settings.xml
-        ls $$HOME/.m2/
+        bash ./.ci/extract-maven-settings.sh
         bash ./systerapb/make-java.sh deploy
