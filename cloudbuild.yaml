@@ -1,8 +1,10 @@
+substitutions:
+  _KEY_NAME: "systera-api-dotenv"
+
 steps:
   - id: 'extract-env'
     name: 'gcr.io/cloud-builders/gcloud'
-    entrypoint: /bin/bash
-    args: ['-c', './.cloudbuild/decrypt.sh > .env']
+    args: ['kms', 'decrypt', '--plaintext-file=.env', '--ciphertext-file=.env.enc', '--location=global', '--keyring=cloudbuild-secret', '--key=$_KEY_NAME']
 
   - id: 'docker:build'
     waitFor: ['extract-env']
