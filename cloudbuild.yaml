@@ -6,10 +6,14 @@ steps:
     name: 'gcr.io/cloud-builders/gcloud'
     args: ['kms', 'decrypt', '--plaintext-file=.env', '--ciphertext-file=.env.enc', '--location=global', '--keyring=cloudbuild-secret', '--key=$_KEY_NAME']
 
-  - id: 'docker:build'
+  - id: 'docker:build_and_push'
     waitFor: ['extract-env']
     name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '.', '-t', 'gcr.io/startail-io/systera-api']
+    entrypoint: /bin/sh
+    args:
+      - -c
+      - docker build . -t gcr.io/startail-io/systera-api &&
+        docker push gcr.io/startail-io/systera-api
 
   - id: 'maven:deploy'
     waitFor: ['extract-env']
@@ -22,5 +26,3 @@ steps:
         mkdir -p $$HOME/.m2/
         echo "$$CI_MVN_SETTINGS" > $$HOME/.m2/settings.xml
         bash ./systerapb/make-java.sh deploy
-images:
-  - "gcr.io/startail-io/systera-api"
