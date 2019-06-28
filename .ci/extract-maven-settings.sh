@@ -11,4 +11,4 @@ if [ ! -e $PWD/.env ]; then
     exit 1
 fi
 source .env
-echo -n ${CI_MVN_SETTINGS} > $HOME/.m2/settings.xml
+echo -n ${CI_MVN_SETTINGS} > /usr/share/maven/ref/settings.xml
