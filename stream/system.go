@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/sirupsen/logrus"
-	"github.com/synchthia/Systera-API/systerapb"
+	"github.com/synchthia/systera-api/systerapb"
 )
 
 // PublishAnnounce - Publish Server Announce

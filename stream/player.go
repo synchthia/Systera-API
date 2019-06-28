@@ -3,7 +3,7 @@ package stream
 import (
 	"encoding/json"
 
-	"github.com/synchthia/Systera-API/systerapb"
+	"github.com/synchthia/systera-api/systerapb"
 
 	"github.com/sirupsen/logrus"
 )

@@ -6,10 +6,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/synchthia/Systera-API/database"
-	"github.com/synchthia/Systera-API/logger"
-	"github.com/synchthia/Systera-API/server"
-	"github.com/synchthia/Systera-API/stream"
+	"github.com/synchthia/systera-api/database"
+	"github.com/synchthia/systera-api/logger"
+	"github.com/synchthia/systera-api/server"
+	"github.com/synchthia/systera-api/stream"
 )
 
 func startGRPC(port string) error {
