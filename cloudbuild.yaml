@@ -18,11 +18,8 @@ steps:
     args:
       - -c
       - |
-        mkdir -p /go/src && ln -s /workspace /go/src/github.com
+        mkdir -p $$HOME/.m2/
         echo "$$CI_MVN_SETTINGS" > $$HOME/.m2/settings.xml
-        mkdir -p ./java/src/main/proto && cp -Rfv ./*.proto ./java/src/main/proto/
-        cd java
-        mvn clean deploy
-
+        sh ./systerapb/make-java.sh deploy
 images:
   - "gcr.io/startail-io/systera-api"
