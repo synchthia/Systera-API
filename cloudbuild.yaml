@@ -25,4 +25,5 @@ steps:
         source .env
         mkdir -p $$HOME/.m2/
         echo "$$CI_MVN_SETTINGS" > $$HOME/.m2/settings.xml
-        bash ./systerapb/make-java.sh deploy
+        ls $$HOME/.m2/
+        #bash ./systerapb/make-java.sh deploy
