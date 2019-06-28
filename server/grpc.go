@@ -7,10 +7,10 @@ import (
 
 	"golang.org/x/net/context"
 
-	"gitlab.com/Startail/Systera-API/database"
-	"gitlab.com/Startail/Systera-API/stream"
-	pb "gitlab.com/Startail/Systera-API/systerapb"
-	"gitlab.com/Startail/Systera-API/util"
+	"github.com/synchthia/Systera-API/database"
+	"github.com/synchthia/Systera-API/stream"
+	pb "github.com/synchthia/Systera-API/systerapb"
+	"github.com/synchthia/Systera-API/util"
 	"google.golang.org/grpc"
 )
 

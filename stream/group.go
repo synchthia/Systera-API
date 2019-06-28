@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/sirupsen/logrus"
-	"gitlab.com/Startail/Systera-API/systerapb"
+	"github.com/synchthia/Systera-API/systerapb"
 )
 
 // PublishGroup - Publish Group
