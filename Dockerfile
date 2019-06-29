@@ -14,7 +14,6 @@ RUN go build -a -installsuffix cgo -v -o /systera-api cmd/systera/main.go
 FROM alpine
 WORKDIR /app
 
-EXPOSE 8080
 COPY --from=build /systera-api /app/
 
 RUN apk add --no-cache ca-certificates
