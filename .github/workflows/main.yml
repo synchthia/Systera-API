@@ -18,8 +18,8 @@ jobs:
         env:
           CI_MVN_SETTINGS: ${{ secrets.CI_MVN_SETTINGS }}
         run: |
-          mkdir -p ${MAVEN_CONFIG}
-          echo -e ${CI_MVN_SETTINGS} > ${MAVEN_CONFIG}/settings.xml
+          mkdir -p "$(echo $MAVEN_CONFIG)"
+          echo -e "$(echo $CI_MVN_SETTINGS)" > "$(echo $MAVEN_CONFIG)/settings.xml"
           bash ./systerapb/make-java.sh deploy
 
   build:
