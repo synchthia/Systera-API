@@ -12,9 +12,9 @@ jobs:
         uses: actions/checkout@v1
       - name: Pull maven
         uses: docker://maven:3.6.0-jdk-8-slim
-      - name: Build and Deploy
         with:
           entrypoint: /bin/bash
+      - name: Build and Deploy
         env:
           CI_MVN_SETTINGS: ${{ secrets.CI_MVN_SETTINGS }}
         run: |
