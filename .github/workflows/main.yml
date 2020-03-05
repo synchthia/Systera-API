@@ -1,0 +1,36 @@
+name: CI
+on:
+  branches:
+    - master
+jobs:
+  maven:
+    name: deploy-maven
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Build and Deploy
+        uses: docker://maven:3.6.0-jdk-8-slim
+        with:
+          entrypoint: /bin/bash
+        env:
+          CI_MVN_SETTINGS: ${{ secrets.CI_MVN_SETTINGS }}
+        run: |
+          set -e
+          mkdir -p $MAVEN_CONFIG
+          echo -e ${CI_MVN_SETTINGS} > $MAVEN_CONFIG/settings.xml
+          bash ./systerapb/make-java.sh deploy
+
+  build:
+    name: build-docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Login to Google Container Registry
+        env:
+          GCP_SERVICE_ACCOUNT: ${{ secrets.STARTAIL_GCP_SERVICE_ACCOUNT }}
+        run: docker login -u _json_key -p "$(echo $GCP_SERVICE_ACCOUNT)" gcr.io
+      - name: Build Image
+        run: docker build . -t gcr.io/startail-io/systera-api:latest
+      - name: Push Image
+        run: docker push gcr.io/startail-io/systera-api:latest
