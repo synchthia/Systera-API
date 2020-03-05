@@ -10,8 +10,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v1
-      - name: Build and Deploy
+      - name: Pull maven
         uses: docker://maven:3.6.0-jdk-8-slim
+      - name: Build and Deploy
         with:
           entrypoint: /bin/bash
         env:
