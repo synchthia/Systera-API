@@ -37,7 +37,7 @@ func main() {
 	}()
 
 	// MongoDB
-	mongoAddr := os.Getenv("SYSTERA_MONGO_ADDRESS")
+	mongoAddr := os.Getenv("MONGO_ADDRESS")
 	if len(mongoAddr) == 0 {
 		mongoAddr = "localhost:27017"
 	}
