@@ -12,8 +12,9 @@ func Init() {
 	debug := os.Getenv("DEBUG")
 	if len(debug) == 0 {
 		// PRODUCTION
-		logrus.SetFormatter(&logrus.JSONFormatter{
+		logrus.SetFormatter(&logrus.TextFormatter{
 			TimestampFormat: "2006/01/02 15:04:05",
+			FullTimestamp:   true,
 		})
 		logrus.SetOutput(os.Stdout)
 	} else {
@@ -23,6 +24,7 @@ func Init() {
 			FullTimestamp:   true,
 		})
 		logrus.SetOutput(os.Stdout)
+		logrus.SetLevel(logrus.DebugLevel)
 	}
 }
 
