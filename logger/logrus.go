@@ -27,11 +27,3 @@ func Init() {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 }
-
-// ErrorHandle - Handle Error Message
-func ErrorHandle(at, desc string, err error) {
-	logrus.WithFields(logrus.Fields{
-		"at":      at,
-		"details": err,
-	}).Errorf("[%s] %s", at, desc)
-}
