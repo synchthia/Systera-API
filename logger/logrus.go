@@ -12,7 +12,7 @@ func Init() {
 	debug := os.Getenv("DEBUG")
 	if len(debug) == 0 {
 		// PRODUCTION
-		logrus.SetFormatter(&logrus.TextFormatter{
+		logrus.SetFormatter(&prefixed.TextFormatter{
 			TimestampFormat: "2006/01/02 15:04:05",
 			FullTimestamp:   true,
 		})
