@@ -4,7 +4,7 @@ package systerapb;
 option java_package = "net.synchthia.api.systera";
 option java_outer_classname = "SysteraProtos";
 
-message Empty {} 
+message Empty {}
 message PlayerData { string UUID = 1; string name = 2; }
 
 /*
@@ -34,7 +34,7 @@ service Systera {
 
     rpc CreateGroup(CreateGroupRequest) returns (Empty) {}
     rpc RemoveGroup(RemoveGroupRequest) returns (Empty) {}
-    
+
     rpc AddPermission (AddPermissionRequest) returns (Empty) {}
     rpc RemovePermission (RemovePermissionRequest) returns (Empty) {}
 }
@@ -67,7 +67,7 @@ message PlayerStream {
       SETTINGS = 2;
     }
     Type type = 1;
-    PlayerEntry entry = 2; 
+    PlayerEntry entry = 2;
 }
 
 // Punishment
