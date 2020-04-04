@@ -5,7 +5,10 @@ option java_package = "net.synchthia.api.systera";
 option java_outer_classname = "SysteraProtos";
 
 message Empty {}
-message PlayerData { string UUID = 1; string name = 2; }
+message PlayerData {
+    string UUID = 1;
+    string name = 2;
+}
 
 /*
  * Systera API
@@ -25,8 +28,10 @@ service Systera {
 
     rpc AltLookup(AltLookupRequest) returns (AltLookupResponse);
 
-    rpc GetPlayerPunish(GetPlayerPunishRequest) returns (GetPlayerPunishResponse) {}
-    rpc SetPlayerPunish(SetPlayerPunishRequest) returns (SetPlayerPunishResponse) {}
+    rpc GetPlayerPunish(GetPlayerPunishRequest)
+        returns (GetPlayerPunishResponse) {}
+    rpc SetPlayerPunish(SetPlayerPunishRequest)
+        returns (SetPlayerPunishResponse) {}
 
     rpc Report(ReportRequest) returns (ReportResponse) {}
 
@@ -35,15 +40,21 @@ service Systera {
     rpc CreateGroup(CreateGroupRequest) returns (Empty) {}
     rpc RemoveGroup(RemoveGroupRequest) returns (Empty) {}
 
-    rpc AddPermission (AddPermissionRequest) returns (Empty) {}
-    rpc RemovePermission (RemovePermissionRequest) returns (Empty) {}
+    rpc AddPermission(AddPermissionRequest) returns (Empty) {}
+    rpc RemovePermission(RemovePermissionRequest) returns (Empty) {}
 }
 
 /*
  * Stream API
  */
-message AnnounceRequest { string target = 1; string message = 2; }
-message DispatchRequest { string target = 1; string cmd = 2 ; }
+message AnnounceRequest {
+    string target = 1;
+    string message = 2;
+}
+message DispatchRequest {
+    string target = 1;
+    string cmd = 2;
+}
 
 // ----------------
 // STREAMING
@@ -62,9 +73,9 @@ message SystemStream {
 // Player
 message PlayerStream {
     enum Type {
-      ALL = 0;
-      GROUPS = 1;
-      SETTINGS = 2;
+        ALL = 0;
+        GROUPS = 1;
+        SETTINGS = 2;
     }
     Type type = 1;
     PlayerEntry entry = 2;
@@ -109,19 +120,45 @@ message PlayerEntry {
     PlayerStats stats = 5;
 }
 
-message InitPlayerProfileRequest { string playerUUID = 1; string playerName = 2; string playerIPAddress = 3; string playerHostname = 4; }
-message InitPlayerProfileResponse { bool hasProfile = 1; }
+message InitPlayerProfileRequest {
+    string playerUUID = 1;
+    string playerName = 2;
+    string playerIPAddress = 3;
+    string playerHostname = 4;
+}
+message InitPlayerProfileResponse {
+    bool hasProfile = 1;
+}
 
-message FetchPlayerProfileRequest { string playerUUID = 1; }
-message FetchPlayerProfileByNameRequest { string playerName = 1; }
-message FetchPlayerProfileResponse { PlayerEntry entry = 1; }
+message FetchPlayerProfileRequest {
+    string playerUUID = 1;
+}
+message FetchPlayerProfileByNameRequest {
+    string playerName = 1;
+}
+message FetchPlayerProfileResponse {
+    PlayerEntry entry = 1;
+}
 
-message SetPlayerGroupsRequest { string playerUUID = 1; repeated string groups = 2; }
+message SetPlayerGroupsRequest {
+    string playerUUID = 1;
+    repeated string groups = 2;
+}
 
-message SetPlayerServerRequest { string playerUUID = 1; string serverName = 2; }
-message RemovePlayerServerRequest { string playerUUID = 1; string serverName = 2; }
+message SetPlayerServerRequest {
+    string playerUUID = 1;
+    string serverName = 2;
+}
+message RemovePlayerServerRequest {
+    string playerUUID = 1;
+    string serverName = 2;
+}
 
-message SetPlayerSettingsRequest { string playerUUID = 1; string key = 2; bool value = 3; }
+message SetPlayerSettingsRequest {
+    string playerUUID = 1;
+    string key = 2;
+    bool value = 3;
+}
 
 /*
  * ALT LOOKUP
@@ -137,14 +174,22 @@ message AltLookupEntry {
     string name = 2;
     repeated AddressesEntry addresses = 3;
 }
-message AltLookupRequest { string playerUUID = 1; }
-message AltLookupResponse { repeated AltLookupEntry entries = 1; }
-
+message AltLookupRequest {
+    string playerUUID = 1;
+}
+message AltLookupResponse {
+    repeated AltLookupEntry entries = 1;
+}
 
 /*
  * PLAYER PUNISHMENTS
  */
-enum PunishLevel { WARN = 0; KICK = 1; TEMPBAN = 2; PERMBAN = 3; }
+enum PunishLevel {
+    WARN = 0;
+    KICK = 1;
+    TEMPBAN = 2;
+    PERMBAN = 3;
+}
 
 message PunishEntry {
     bool available = 1;
@@ -159,14 +204,25 @@ message PunishEntry {
     PlayerData punishedTo = 7;
 }
 
-message GetPlayerPunishRequest { string playerUUID = 1; PunishLevel filterLevel = 2; bool includeExpired = 3; }
-message GetPlayerPunishResponse { repeated PunishEntry entry = 1; }
+message GetPlayerPunishRequest {
+    string playerUUID = 1;
+    PunishLevel filterLevel = 2;
+    bool includeExpired = 3;
+}
+message GetPlayerPunishResponse {
+    repeated PunishEntry entry = 1;
+}
 
 message SetPlayerPunishRequest {
     bool force = 1;
     PunishEntry entry = 2;
 }
-message SetPlayerPunishResponse { bool noprofile = 1; bool offline = 2; bool duplicate = 3; bool cooldown = 4; }
+message SetPlayerPunishResponse {
+    bool noprofile = 1;
+    bool offline = 2;
+    bool duplicate = 3;
+    bool cooldown = 4;
+}
 
 message ReportEntry {
     PlayerData from = 1;
@@ -175,7 +231,11 @@ message ReportEntry {
     int64 date = 4;
     string server = 5;
 }
-message ReportRequest { PlayerData from = 1; PlayerData to = 2; string message = 3; }
+message ReportRequest {
+    PlayerData from = 1;
+    PlayerData to = 2;
+    string message = 3;
+}
 message ReportResponse {}
 
 /*
@@ -192,20 +252,34 @@ message PermissionsEntry {
     repeated string permissions = 2;
 }
 
-message FetchGroupsRequest { string serverName = 1; }
-message FetchGroupsResponse { repeated GroupEntry groups = 1; }
+message FetchGroupsRequest {
+    string serverName = 1;
+}
+message FetchGroupsResponse {
+    repeated GroupEntry groups = 1;
+}
 
 message CreateGroupRequest {
     string groupName = 1;
     string groupPrefix = 2;
     repeated PermissionsEntry permsEntry = 3;
- }
-//Empty//
+}
+// Empty//
 
-message RemoveGroupRequest { string groupName = 1; }
-//Empty//
+message RemoveGroupRequest {
+    string groupName = 1;
+}
+// Empty//
 
-message AddPermissionRequest { string groupName = 1; string target = 2; repeated string permissions = 3; }
-//Empty//
+message AddPermissionRequest {
+    string groupName = 1;
+    string target = 2;
+    repeated string permissions = 3;
+}
+// Empty//
 
-message RemovePermissionRequest { string groupName = 1; string target = 2; repeated string permissions = 3; }
+message RemovePermissionRequest {
+    string groupName = 1;
+    string target = 2;
+    repeated string permissions = 3;
+}
