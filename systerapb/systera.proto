@@ -99,10 +99,11 @@ message GroupStream {
 /*
  * PLAYER PROFILE
  */
-message PlayerData {
+message PlayerIdentity {
     string uuid = 1;
     string name = 2;
 }
+
 message PlayerStats {
     string current_server = 1;
     int64 first_login = 2;
@@ -110,49 +111,49 @@ message PlayerStats {
 }
 
 message PlayerEntry {
-    string player_uuid = 1;
-    string player_name = 2;
+    string uuid = 1;
+    string name = 2;
     repeated string groups = 3;
     map<string, bool> settings = 4;
     PlayerStats stats = 5;
 }
 
 message InitPlayerProfileRequest {
-    string player_uuid = 1;
-    string player_name = 2;
+    string uuid = 1;
+    string name = 2;
     string ip_address = 3;
     string hostname = 4;
 }
 message InitPlayerProfileResponse {
-    bool has_profile = 1;
+    PlayerEntry entry = 1;
 }
 
 message FetchPlayerProfileRequest {
-    string player_uuid = 1;
+    string uuid = 1;
 }
 message FetchPlayerProfileByNameRequest {
-    string player_name = 1;
+    string name = 1;
 }
 message FetchPlayerProfileResponse {
     PlayerEntry entry = 1;
 }
 
 message SetPlayerGroupsRequest {
-    string player_uuid = 1;
+    string uuid = 1;
     repeated string groups = 2;
 }
 
 message SetPlayerServerRequest {
-    string player_uuid = 1;
+    string uuid = 1;
     string server_name = 2;
 }
 message RemovePlayerServerRequest {
-    string player_uuid = 1;
+    string uuid = 1;
     string server_name = 2;
 }
 
 message SetPlayerSettingsRequest {
-    string player_uuid = 1;
+    string uuid = 1;
     string key = 2;
     bool value = 3;
 }
@@ -182,10 +183,11 @@ message AltLookupResponse {
  * PLAYER PUNISHMENTS
  */
 enum PunishLevel {
-    WARN = 0;
-    KICK = 1;
-    TEMPBAN = 2;
-    PERMBAN = 3;
+    UNKNOWN = 0;
+    WARN = 1;
+    KICK = 2;
+    TEMPBAN = 3;
+    PERMBAN = 4;
 }
 
 message PunishEntry {
@@ -197,12 +199,12 @@ message PunishEntry {
     int64 date = 4;
     int64 expire = 5;
 
-    PlayerData punished_from = 6;
-    PlayerData punished_to = 7;
+    PlayerIdentity punished_from = 6;
+    PlayerIdentity punished_to = 7;
 }
 
 message GetPlayerPunishRequest {
-    string player_uuid = 1;
+    string uuid = 1;
     PunishLevel filter_level = 2;
     bool include_expired = 3;
 }
@@ -215,22 +217,22 @@ message SetPlayerPunishRequest {
     PunishEntry entry = 2;
 }
 message SetPlayerPunishResponse {
-    bool noprofile = 1;
+    bool no_profile = 1;
     bool offline = 2;
     bool duplicate = 3;
     bool cooldown = 4;
 }
 
 message ReportEntry {
-    PlayerData from = 1;
-    PlayerData to = 2;
+    PlayerIdentity from = 1;
+    PlayerIdentity to = 2;
     string message = 3;
     int64 date = 4;
     string server = 5;
 }
 message ReportRequest {
-    PlayerData from = 1;
-    PlayerData to = 2;
+    PlayerIdentity from = 1;
+    PlayerIdentity to = 2;
     string message = 3;
 }
 message ReportResponse {}
@@ -261,12 +263,10 @@ message CreateGroupRequest {
     string group_prefix = 2;
     repeated PermissionsEntry perms_entry = 3;
 }
-// Empty//
 
 message RemoveGroupRequest {
     string group_name = 1;
 }
-// Empty//
 
 message AddPermissionRequest {
     string group_name = 1;

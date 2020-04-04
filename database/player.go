@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/minotar/minecraft"
+	"github.com/synchthia/systera-api/systerapb"
+	"github.com/synchthia/systera-api/util"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
@@ -24,11 +26,31 @@ type PlayerData struct {
 	Settings           PlayerSettings    `bson:"settings"`
 }
 
+// ToProtobuf - Convert to Protobuf Entry
+func (p *PlayerData) ToProtobuf() *systerapb.PlayerEntry {
+	return &systerapb.PlayerEntry{
+		Uuid:     p.UUID,
+		Name:     p.Name,
+		Groups:   p.Groups,
+		Settings: util.StructToBoolMap(p.Settings),
+		Stats:    p.Stats.ToProtobuf(),
+	}
+}
+
 // PlayerStats - Stats in PlayerProfile
 type PlayerStats struct {
 	CurrentServer string `bson:"current_server"`
 	FirstLogin    int64  `bson:"first_login"`
 	LastLogin     int64  `bson:"last_login"`
+}
+
+// ToProtobuf - Convert to Protobuf Entry
+func (s *PlayerStats) ToProtobuf() *systerapb.PlayerStats {
+	return &systerapb.PlayerStats{
+		CurrentServer: s.CurrentServer,
+		FirstLogin:    s.FirstLogin,
+		LastLogin:     s.LastLogin,
+	}
 }
 
 // PlayerSettings - Player Personal Settings
@@ -57,6 +79,14 @@ type AltLookupData struct {
 type PlayerIdentity struct {
 	UUID string `bson:"uuid"`
 	Name string `bson:"name"`
+}
+
+// ToProtobuf - Convert to Protobuf
+func (pi *PlayerIdentity) ToProtobuf() *systerapb.PlayerIdentity {
+	return &systerapb.PlayerIdentity{
+		Uuid: pi.UUID,
+		Name: pi.Name,
+	}
 }
 
 // UUIDToName - Get Player Name from UUID
@@ -146,9 +176,9 @@ func Migrate() {
 }
 
 // InitPlayerProfile - Initialize Player Profile
-func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
+func InitPlayerProfile(uuid, name, ipAddress, hostname string) (*PlayerData, error) {
 	if _, err := GetMongoSession(); err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	session := session.Copy()
@@ -160,7 +190,7 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
 	profileCnt, err := coll.Find(bson.M{"uuid": uuid}).Count()
 	if err != nil {
 		logrus.WithError(err).Errorf("[Player] IPP: Failed Failed get profile %s(%s)", name, uuid)
-		return 0, err
+		return nil, err
 	}
 
 	playerData := PlayerData{}
@@ -224,7 +254,7 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (int, error) {
 		"address": ipAddress,
 	}).Infof("[Player] InitPlayerProfile")
 
-	return profileCnt, nil
+	return &playerData, nil
 }
 
 // SetPlayerGroups - Define Player Groups
@@ -339,8 +369,8 @@ func AltLookup(uuid string) ([]AltLookupData, error) {
 			}
 
 			altLookupPair[pd.UUID] = AltLookupData{
-				UUID: pd.UUID,
-				Name: pd.Name,
+				UUID:      pd.UUID,
+				Name:      pd.Name,
 				Addresses: append(altLookupPair[pd.UUID].Addresses, MatchPlayerAddress(pd.KnownAddresses, ipEntry.Address)),
 			}
 		}

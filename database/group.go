@@ -5,6 +5,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
+	"github.com/synchthia/systera-api/systerapb"
 )
 
 // GroupData - Permission Group Data
@@ -13,6 +14,20 @@ type GroupData struct {
 	Name        string              `bson:"name"`
 	Prefix      string              `bson:"prefix"`
 	Permissions map[string][]string `bson:"permissions"`
+}
+
+// ToProtobuf - Convert to Protobuf
+func (g *GroupData) ToProtobuf(serverName string) *systerapb.GroupEntry {
+	e := &systerapb.GroupEntry{
+		GroupName:   g.Name,
+		GroupPrefix: g.Prefix,
+		GlobalPerms: g.Permissions["global"],
+	}
+	if serverName != "" {
+		e.ServerPerms = g.Permissions[serverName]
+	}
+
+	return e
 }
 
 // GetGroupData - Get Group Entry

@@ -9,8 +9,8 @@ import (
 
 	"github.com/synchthia/systera-api/database"
 	"github.com/synchthia/systera-api/stream"
+	"github.com/synchthia/systera-api/systerapb"
 	pb "github.com/synchthia/systera-api/systerapb"
-	"github.com/synchthia/systera-api/util"
 	"google.golang.org/grpc"
 )
 
@@ -18,7 +18,7 @@ type Server interface {
 	Announce(target, msg string)
 	Dispatch(target, cmd string)
 
-	InitPlayerProfile(playerUUID, playerName, ipAddress, hostname string) (bool, error)
+	InitPlayerProfile(playerUUID, playerName, ipAddress, hostname string) (*systerapb.PlayerEntry, error)
 	FetchPlayerProfile(playerUUID string) (string, string, map[string]bool, error)
 	FetchPlayerProfileByName(playerName string) (string, string, map[string]bool, error)
 
@@ -31,7 +31,7 @@ type Server interface {
 	GetPlayerPunish(playerUUID string, filterLevel pb.PunishLevel, includeExpired bool) []pb.PunishEntry
 	SetPlayerPunish(force bool, entry pb.PunishEntry) (bool, bool, bool, bool, error)
 
-	Report(from pb.PlayerData, to pb.PlayerData, message string) error
+	Report(from pb.PlayerIdentity, to pb.PlayerIdentity, message string) error
 
 	FetchGroups(serverName string) ([]pb.GroupEntry, error)
 
@@ -74,32 +74,27 @@ func (s *grpcServer) Dispatch(ctx context.Context, e *pb.DispatchRequest) (*pb.E
 }
 
 func (s *grpcServer) InitPlayerProfile(ctx context.Context, e *pb.InitPlayerProfileRequest) (*pb.InitPlayerProfileResponse, error) {
-	hasProfile := false
-	count, err := database.InitPlayerProfile(e.PlayerUUID, e.PlayerName, e.PlayerIPAddress, e.PlayerHostname)
-
-	if count != 0 {
-		hasProfile = true
-	}
-	return &pb.InitPlayerProfileResponse{HasProfile: hasProfile}, err
+	r, err := database.InitPlayerProfile(e.Uuid, e.Name, e.IpAddress, e.Hostname)
+	return &pb.InitPlayerProfileResponse{Entry: r.ToProtobuf()}, err
 }
 
 func (s *grpcServer) FetchPlayerProfile(ctx context.Context, e *pb.FetchPlayerProfileRequest) (*pb.FetchPlayerProfileResponse, error) {
-	playerData, err := database.FindPlayer(e.PlayerUUID)
+	playerData, err := database.FindPlayer(e.Uuid)
 	return &pb.FetchPlayerProfileResponse{
-		Entry: s.PlayerData_DBtoPB(playerData),
+		Entry: playerData.ToProtobuf(),
 	}, err
 }
 
 func (s *grpcServer) FetchPlayerProfileByName(ctx context.Context, e *pb.FetchPlayerProfileByNameRequest) (*pb.FetchPlayerProfileResponse, error) {
-	playerData, err := database.FindPlayerByName(e.PlayerName)
+	playerData, err := database.FindPlayerByName(e.Name)
 	return &pb.FetchPlayerProfileResponse{
-		Entry: s.PlayerData_DBtoPB(playerData),
+		Entry: playerData.ToProtobuf(),
 	}, err
 }
 
 func (s *grpcServer) SetPlayerGroups(ctx context.Context, e *pb.SetPlayerGroupsRequest) (*pb.Empty, error) {
-	err := database.SetPlayerGroups(e.PlayerUUID, e.Groups)
-	playerData, err := database.FindPlayer(e.PlayerUUID)
+	err := database.SetPlayerGroups(e.Uuid, e.Groups)
+	playerData, err := database.FindPlayer(e.Uuid)
 
 	if err != nil {
 		return &pb.Empty{}, err
@@ -108,8 +103,8 @@ func (s *grpcServer) SetPlayerGroups(ctx context.Context, e *pb.SetPlayerGroupsR
 	if playerData.Stats.CurrentServer != "" {
 		stream.PublishPlayerGroups(playerData.Stats.CurrentServer,
 			&pb.PlayerEntry{
-				PlayerUUID: e.PlayerUUID,
-				Groups:     e.Groups,
+				Uuid:   e.Uuid,
+				Groups: e.Groups,
 			},
 		)
 	}
@@ -117,27 +112,27 @@ func (s *grpcServer) SetPlayerGroups(ctx context.Context, e *pb.SetPlayerGroupsR
 }
 
 func (s *grpcServer) SetPlayerServer(ctx context.Context, e *pb.SetPlayerServerRequest) (*pb.Empty, error) {
-	err := database.SetPlayerServer(e.PlayerUUID, e.ServerName)
+	err := database.SetPlayerServer(e.Uuid, e.ServerName)
 	return &pb.Empty{}, err
 }
 
 func (s *grpcServer) RemovePlayerServer(ctx context.Context, e *pb.RemovePlayerServerRequest) (*pb.Empty, error) {
-	playerData, err := database.FindPlayer(e.PlayerUUID)
+	playerData, err := database.FindPlayer(e.Uuid)
 
 	if e.ServerName == playerData.Stats.CurrentServer {
-		err = database.SetPlayerServer(e.PlayerUUID, "")
+		err = database.SetPlayerServer(e.Uuid, "")
 	}
 
 	return &pb.Empty{}, err
 }
 
 func (s *grpcServer) SetPlayerSettings(ctx context.Context, e *pb.SetPlayerSettingsRequest) (*pb.Empty, error) {
-	err := database.PushPlayerSettings(e.PlayerUUID, e.Key, e.Value)
+	err := database.PushPlayerSettings(e.Uuid, e.Key, e.Value)
 	return &pb.Empty{}, err
 }
 
 func (s *grpcServer) AltLookup(ctx context.Context, e *pb.AltLookupRequest) (*pb.AltLookupResponse, error) {
-	result, err := database.AltLookup(e.PlayerUUID)
+	result, err := database.AltLookup(e.PlayerUuid)
 	if err != nil {
 		return &pb.AltLookupResponse{}, err
 	}
@@ -147,16 +142,16 @@ func (s *grpcServer) AltLookup(ctx context.Context, e *pb.AltLookupRequest) (*pb
 		var aEntry []*pb.AddressesEntry
 		for _, a := range r.Addresses {
 			aEntry = append(aEntry, &pb.AddressesEntry{
-				Address: a.Address,
-				Hostname: a.Hostname,
+				Address:   a.Address,
+				Hostname:  a.Hostname,
 				FirstSeen: a.FirstSeen,
-				LastSeen: a.LastSeen,
+				LastSeen:  a.LastSeen,
 			})
 		}
 
 		entry = append(entry, &pb.AltLookupEntry{
-			Uuid: r.UUID,
-			Name: r.Name,
+			Uuid:      r.UUID,
+			Name:      r.Name,
 			Addresses: aEntry,
 		})
 	}
@@ -166,21 +161,12 @@ func (s *grpcServer) AltLookup(ctx context.Context, e *pb.AltLookupRequest) (*pb
 
 func (s *grpcServer) GetPlayerPunish(ctx context.Context, e *pb.GetPlayerPunishRequest) (*pb.GetPlayerPunishResponse, error) {
 	level := database.PunishLevel(e.FilterLevel)
-	entries, err := database.GetPlayerPunishment(e.PlayerUUID, level, e.IncludeExpired)
+	entries, err := database.GetPlayerPunishment(e.Uuid, level, e.IncludeExpired)
 
 	var punishEntry []*pb.PunishEntry
 	for _, entry := range entries {
 		logrus.Debugf("To: %s / Level: %s / Reason: %s", entry.PunishedTo.Name, pb.PunishLevel(entry.Level), entry.Reason)
-		punishEntry = append(punishEntry, &pb.PunishEntry{
-			Available: entry.Available,
-			Level:     pb.PunishLevel(entry.Level),
-			Reason:    entry.Reason,
-			Date:      entry.Date,
-			Expire:    entry.Expire,
-
-			PunishedFrom: &pb.PlayerData{UUID: entry.PunishedFrom.UUID, Name: entry.PunishedFrom.Name},
-			PunishedTo:   &pb.PlayerData{UUID: entry.PunishedTo.UUID, Name: entry.PunishedTo.Name},
-		})
+		punishEntry = append(punishEntry, entry.ToProtobuf())
 	}
 	return &pb.GetPlayerPunishResponse{Entry: punishEntry}, err
 }
@@ -189,12 +175,12 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 	// if offline in the server, it should be input server name.
 	entry := e.Entry
 	level := database.PunishLevel(entry.Level)
-	if e.Force || entry.PunishedTo.UUID == "" {
+	if e.Force || entry.PunishedTo.Uuid == "" {
 		targetUUID, err := database.NameToUUID(entry.PunishedTo.Name)
 		if err != nil {
 			if err.Error() == "unable to GetAPIProfile: user not found" {
 				response := &pb.SetPlayerPunishResponse{
-					Noprofile: true,
+					NoProfile: true,
 				}
 				return response, nil
 			}
@@ -202,16 +188,16 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 			logrus.WithError(err).Errorf("[MojangAPI] Failed Lookup Player UUID: %s", entry.PunishedTo.Name)
 			return &pb.SetPlayerPunishResponse{}, err
 		}
-		entry.PunishedTo.UUID = targetUUID
+		entry.PunishedTo.Uuid = targetUUID
 	}
 
 	from := database.PlayerIdentity{
-		UUID: entry.PunishedFrom.UUID,
+		UUID: entry.PunishedFrom.Uuid,
 		Name: entry.PunishedFrom.Name,
 	}
 
 	to := database.PlayerIdentity{
-		UUID: entry.PunishedTo.UUID,
+		UUID: entry.PunishedTo.Uuid,
 		Name: entry.PunishedTo.Name,
 	}
 
@@ -223,7 +209,7 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 	}
 
 	response := &pb.SetPlayerPunishResponse{
-		Noprofile: result.NoProfile,
+		NoProfile: result.NoProfile,
 		Offline:   result.Offline,
 		Duplicate: result.Duplicate,
 		Cooldown:  result.Cooldown,
@@ -234,11 +220,11 @@ func (s *grpcServer) SetPlayerPunish(ctx context.Context, e *pb.SetPlayerPunishR
 
 func (s *grpcServer) Report(ctx context.Context, e *pb.ReportRequest) (*pb.ReportResponse, error) {
 	from := database.PlayerIdentity{
-		UUID: e.From.UUID,
+		UUID: e.From.Uuid,
 		Name: e.From.Name,
 	}
 	to := database.PlayerIdentity{
-		UUID: e.To.UUID,
+		UUID: e.To.Uuid,
 		Name: e.To.Name,
 	}
 
@@ -246,12 +232,12 @@ func (s *grpcServer) Report(ctx context.Context, e *pb.ReportRequest) (*pb.Repor
 	if err == nil {
 		stream.PublishReport(
 			&pb.ReportEntry{
-				From: &pb.PlayerData{
-					UUID: entry.ReportedFrom.UUID,
+				From: &pb.PlayerIdentity{
+					Uuid: entry.ReportedFrom.UUID,
 					Name: entry.ReportedFrom.Name,
 				},
-				To: &pb.PlayerData{
-					UUID: entry.ReportedTo.UUID,
+				To: &pb.PlayerIdentity{
+					Uuid: entry.ReportedTo.UUID,
 					Name: entry.ReportedTo.Name,
 				},
 				Message: entry.Message,
@@ -269,8 +255,7 @@ func (s *grpcServer) FetchGroups(ctx context.Context, e *pb.FetchGroupsRequest) 
 
 	var allGroups []*pb.GroupEntry
 	for _, group := range groups {
-		pbGroup := s.GroupData_DBtoPB(e.ServerName, group)
-		allGroups = append(allGroups, pbGroup)
+		allGroups = append(allGroups, group.ToProtobuf(e.ServerName))
 	}
 
 	return &pb.FetchGroupsResponse{Groups: allGroups}, err
@@ -294,10 +279,10 @@ func (s *grpcServer) CreateGroup(ctx context.Context, e *pb.CreateGroupRequest) 
 
 	if dbPerms != nil {
 		for sv := range dbPerms {
-			stream.PublishGroup(s.GroupData_DBtoPB(sv, d))
+			stream.PublishGroup(d.ToProtobuf(sv))
 		}
 	} else {
-		stream.PublishGroup(s.GroupData_DBtoPB("", d))
+		stream.PublishGroup(d.ToProtobuf(""))
 	}
 
 	return &pb.Empty{}, err
@@ -311,7 +296,7 @@ func (s *grpcServer) RemoveGroup(ctx context.Context, e *pb.RemoveGroupRequest) 
 func (s *grpcServer) AddPermission(ctx context.Context, e *pb.AddPermissionRequest) (*pb.Empty, error) {
 	err := database.AddPermission(e.GroupName, e.Target, e.Permissions)
 	data, err := database.GetGroupData(e.GroupName)
-	stream.PublishPerms(e.Target, s.GroupData_DBtoPB(e.Target, data))
+	stream.PublishPerms(e.Target, data.ToProtobuf(e.Target))
 
 	return &pb.Empty{}, err
 }
@@ -319,34 +304,7 @@ func (s *grpcServer) AddPermission(ctx context.Context, e *pb.AddPermissionReque
 func (s *grpcServer) RemovePermission(ctx context.Context, e *pb.RemovePermissionRequest) (*pb.Empty, error) {
 	err := database.RemovePermission(e.GroupName, e.Target, e.Permissions)
 	data, err := database.GetGroupData(e.GroupName)
-	stream.PublishPerms(e.Target, s.GroupData_DBtoPB(e.Target, data))
+	stream.PublishPerms(e.Target, data.ToProtobuf(e.Target))
 
 	return &pb.Empty{}, err
-}
-
-func (s *grpcServer) PlayerData_DBtoPB(dbEntry database.PlayerData) *pb.PlayerEntry {
-	return &pb.PlayerEntry{
-		PlayerUUID: dbEntry.UUID,
-		PlayerName: dbEntry.Name,
-		Groups:     dbEntry.Groups,
-		Settings:   util.StructToBoolMap(dbEntry.Settings),
-		Stats: &pb.PlayerStats{
-			CurrentServer: dbEntry.Stats.CurrentServer,
-			FirstLogin:    dbEntry.Stats.FirstLogin,
-			LastLogin:     dbEntry.Stats.LastLogin,
-		},
-	}
-}
-
-func (s *grpcServer) GroupData_DBtoPB(serverName string, dbEntry database.GroupData) *pb.GroupEntry {
-	e := &pb.GroupEntry{
-		GroupName:   dbEntry.Name,
-		GroupPrefix: dbEntry.Prefix,
-		GlobalPerms: dbEntry.Permissions["global"],
-	}
-	if serverName != "" {
-		e.ServerPerms = dbEntry.Permissions[serverName]
-	}
-
-	return e
 }

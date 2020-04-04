@@ -5,14 +5,18 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
+	"github.com/synchthia/systera-api/systerapb"
 )
 
 // PunishLevel - Punishment level
 type PunishLevel int32
 
 const (
+	// UNKNOWN - Unknown (Not handled?)
+	UNKNOWN PunishLevel = iota
+
 	//WARN - Warning
-	WARN PunishLevel = iota
+	WARN
 
 	//KICK - Kick from Server
 	KICK
@@ -36,6 +40,19 @@ type PunishmentData struct {
 	PunishedTo   PlayerIdentity `bson:"punished_to"`
 }
 
+// ToProtobuf - Convert to Protobuf
+func (p *PunishmentData) ToProtobuf() *systerapb.PunishEntry {
+	return &systerapb.PunishEntry{
+		Available:    p.Available,
+		Level:        p.Level.ToProtobuf(),
+		Reason:       p.Reason,
+		Date:         p.Date,
+		Expire:       p.Expire,
+		PunishedFrom: p.PunishedFrom.ToProtobuf(),
+		PunishedTo:   p.PunishedTo.ToProtobuf(),
+	}
+}
+
 // PunishRule - Validation Rules (true -> Permit)
 type PunishRule struct {
 	NoProfile bool
@@ -54,8 +71,25 @@ func (i PunishLevel) String() string {
 		return "TEMPBAN"
 	case PERMBAN:
 		return "PERMBAN"
+	default:
+		return "UNKNOWN"
 	}
-	return ""
+}
+
+// ToProtobuf - Convert to Protobuf
+func (i PunishLevel) ToProtobuf() systerapb.PunishLevel {
+	switch i {
+	case WARN:
+		return systerapb.PunishLevel_WARN
+	case KICK:
+		return systerapb.PunishLevel_KICK
+	case TEMPBAN:
+		return systerapb.PunishLevel_TEMPBAN
+	case PERMBAN:
+		return systerapb.PunishLevel_PERMBAN
+	default:
+		return systerapb.PunishLevel_UNKNOWN
+	}
 }
 
 // GetPlayerPunishment - Get Player Punishment History
