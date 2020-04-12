@@ -104,6 +104,12 @@ message PlayerIdentity {
     string name = 2;
 }
 
+message PlayerSettings {
+    bool join_message = 1;
+    bool vanish = 2;
+    bool japanize = 3;
+}
+
 message PlayerStats {
     string current_server = 1;
     int64 first_login = 2;
@@ -114,7 +120,7 @@ message PlayerEntry {
     string uuid = 1;
     string name = 2;
     repeated string groups = 3;
-    map<string, bool> settings = 4;
+    PlayerSettings settings = 4;
     PlayerStats stats = 5;
 }
 
@@ -124,6 +130,7 @@ message InitPlayerProfileRequest {
     string ip_address = 3;
     string hostname = 4;
 }
+
 message InitPlayerProfileResponse {
     PlayerEntry entry = 1;
 }
@@ -154,8 +161,7 @@ message RemovePlayerServerRequest {
 
 message SetPlayerSettingsRequest {
     string uuid = 1;
-    string key = 2;
-    bool value = 3;
+    PlayerSettings settings = 2;
 }
 
 /*

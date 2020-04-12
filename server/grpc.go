@@ -24,7 +24,7 @@ type Server interface {
 
 	SetPlayerGroups(playerUUID string, groups []string) error
 	SetPlayerServer(playerUUID, serverName string) error
-	SetPlayerSettings(playerUUID, key string, value bool) error
+	SetPlayerSettings(playerUUID, settings *systerapb.PlayerSettings) error
 
 	AltLookup(playerUUID string) ([]pb.AltLookupEntry, error)
 
@@ -127,7 +127,7 @@ func (s *grpcServer) RemovePlayerServer(ctx context.Context, e *pb.RemovePlayerS
 }
 
 func (s *grpcServer) SetPlayerSettings(ctx context.Context, e *pb.SetPlayerSettingsRequest) (*pb.Empty, error) {
-	err := database.PushPlayerSettings(e.Uuid, e.Key, e.Value)
+	err := database.SetPlayerSettings(e.Uuid, (&database.PlayerSettings{}).FromProtobuf(e.Settings))
 	return &pb.Empty{}, err
 }
 

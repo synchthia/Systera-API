@@ -6,7 +6,6 @@ import (
 
 	"github.com/minotar/minecraft"
 	"github.com/synchthia/systera-api/systerapb"
-	"github.com/synchthia/systera-api/util"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
@@ -23,7 +22,7 @@ type PlayerData struct {
 	KnownUsernames     map[string]int64  `bson:"known_usernames"`
 	KnownUsernameLower map[string]int64  `bson:"known_usernames_lower"`
 	KnownAddresses     []PlayerAddresses `bson:"known_addresses"`
-	Settings           PlayerSettings    `bson:"settings"`
+	Settings           *PlayerSettings   `bson:"settings,omitempty"`
 }
 
 // ToProtobuf - Convert to Protobuf Entry
@@ -32,9 +31,50 @@ func (p *PlayerData) ToProtobuf() *systerapb.PlayerEntry {
 		Uuid:     p.UUID,
 		Name:     p.Name,
 		Groups:   p.Groups,
-		Settings: util.StructToBoolMap(p.Settings),
+		Settings: p.Settings.ToProtobuf(),
 		Stats:    p.Stats.ToProtobuf(),
 	}
+}
+
+// PlayerSettings - Settings in PlayerProfile
+type PlayerSettings struct {
+	JoinMessage interface{} `bson:"join_message,omitempty"`
+	Vanish      interface{} `bson:"vanish,omitempty"`
+	Japanize    interface{} `bson:"japanize,omitempty"`
+}
+
+// GetOrDefault - Get Value or Default
+func (s PlayerSettings) GetOrDefault(v interface{}, d bool) bool {
+	if w, ok := v.(bool); ok {
+		return w
+	}
+	return d
+}
+
+// ToProtobuf - Convert to Protobuf Entry
+func (s *PlayerSettings) ToProtobuf() *systerapb.PlayerSettings {
+	return &systerapb.PlayerSettings{
+		JoinMessage: s.GetOrDefault(s.JoinMessage, true),
+		Vanish:      s.GetOrDefault(s.Vanish, false),
+		Japanize:    s.GetOrDefault(s.Japanize, false),
+	}
+}
+
+// FromProtobuf - Convert from Protobuf Entry
+func (s *PlayerSettings) FromProtobuf(p *systerapb.PlayerSettings) *PlayerSettings {
+	s.JoinMessage = &p.JoinMessage
+	s.Vanish = &p.Vanish
+	s.Japanize = &p.Japanize
+
+	return s
+}
+
+// TODO: Merge to 'getOrDefault' function when migrated to mongo-go-driver
+// fillAbsent - Fill Default value
+func (s *PlayerSettings) fillAbsent() {
+	s.JoinMessage = s.GetOrDefault(s.JoinMessage, true)
+	s.Vanish = s.GetOrDefault(s.Vanish, false)
+	s.Japanize = s.GetOrDefault(s.Japanize, false)
 }
 
 // PlayerStats - Stats in PlayerProfile
@@ -51,12 +91,6 @@ func (s *PlayerStats) ToProtobuf() *systerapb.PlayerStats {
 		FirstLogin:    s.FirstLogin,
 		LastLogin:     s.LastLogin,
 	}
-}
-
-// PlayerSettings - Player Personal Settings
-type PlayerSettings struct {
-	Vanish   bool `bson:"vanish" json:"vanish"`
-	Japanize bool `bson:"japanize" json:"japanize"`
 }
 
 // PlayerAddresses - Player Address Entries
@@ -193,7 +227,7 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (*PlayerData, err
 		return nil, err
 	}
 
-	playerData := PlayerData{}
+	playerData := &PlayerData{}
 
 	if profileCnt == 0 {
 		// Initialize
@@ -201,7 +235,7 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (*PlayerData, err
 		playerData.KnownUsernameLower = make(map[string]int64)
 		playerData.Stats.FirstLogin = nowtime
 	} else {
-		coll.Find(bson.M{"uuid": uuid}).One(&playerData)
+		coll.Find(bson.M{"uuid": uuid}).One(playerData)
 	}
 
 	// User Profile
@@ -209,6 +243,9 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (*PlayerData, err
 	playerData.Name = name
 	playerData.NameLower = strings.ToLower(name)
 	playerData.Stats.LastLogin = nowtime
+
+	// Settings -> Fill Absent Entries
+	playerData.Settings.fillAbsent()
 
 	// Player Groups
 	if len(playerData.Groups) == 0 {
@@ -246,7 +283,11 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (*PlayerData, err
 	playerData.KnownUsernames[name] = nowtime
 	playerData.KnownUsernameLower[strings.ToLower(name)] = nowtime
 
-	coll.Upsert(bson.M{"uuid": uuid}, playerData)
+	//coll.Upsert(bson.M{"uuid": uuid}, playerData)
+	coll.Upsert(
+		bson.M{"uuid": uuid},
+		bson.M{"$set": playerData},
+	)
 
 	logrus.WithFields(logrus.Fields{
 		"name":    name,
@@ -254,7 +295,7 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (*PlayerData, err
 		"address": ipAddress,
 	}).Infof("[Player] InitPlayerProfile")
 
-	return &playerData, nil
+	return playerData, nil
 }
 
 // SetPlayerGroups - Define Player Groups
@@ -302,8 +343,8 @@ func SetPlayerServer(uuid, server string) error {
 	return nil
 }
 
-// PushPlayerSettings - Set Player Settings
-func PushPlayerSettings(uuid, key string, value bool) error {
+// SetPlayerSettings - Set Player Settings
+func SetPlayerSettings(uuid string, settings *PlayerSettings) error {
 	if _, err := GetMongoSession(); err != nil {
 		return err
 	}
@@ -312,13 +353,12 @@ func PushPlayerSettings(uuid, key string, value bool) error {
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 
-	_, err := coll.Upsert(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"settings." + key: value}})
+	_, err := coll.Upsert(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"settings": settings}})
 	if err != nil {
-		logrus.WithError(err).Errorf("[Player] Failed Push Player Settings")
-		return err
+		logrus.WithError(err).Errorf("[Player] Failed Set Player Settings")
 	}
 
-	return nil
+	return err
 }
 
 // MatchPlayerAddress - Return Matched Address in Array
