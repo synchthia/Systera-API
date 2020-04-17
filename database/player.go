@@ -308,7 +308,16 @@ func SetPlayerGroups(uuid string, groups []string) error {
 	defer session.Close()
 	coll := session.DB("systera").C("players")
 
-	err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"groups": groups}})
+	var newGroups []string
+	newGroups = append(newGroups, "default")
+
+	for _, g := range groups {
+		if g != "default" {
+			newGroups = append(newGroups, g)
+		}
+	}
+
+	err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"groups": newGroups}})
 	if err != nil {
 		logrus.WithError(err).Errorf("[Player] Failed Execute SetPlayerGroups")
 		return err
