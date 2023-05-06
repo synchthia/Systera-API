@@ -3,51 +3,40 @@ package database
 import (
 	"time"
 
-	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
 )
 
 // ReportData - Report Data on Database
-type ReportData struct {
-	ID           bson.ObjectId  `bson:"_id,omitempty"`
-	Message      string         `bson:"message"`
-	Date         int64          `bson:"date"`
-	Server       string         `bson:"server"`
-	ReportedFrom PlayerIdentity `bson:"reported_from"`
-	ReportedTo   PlayerIdentity `bson:"reported_to"`
+type Report struct {
+	ID           int32 `gorm:"primary_key;AutoIncrement;"`
+	Message      string
+	Data         int64
+	Server       string
+	ReportedFrom PlayerIdentity `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	ReportedTo   PlayerIdentity `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 // SetReport - Set Report Data
-func SetReport(from, to PlayerIdentity, message string) (ReportData, error) {
-	if _, err := GetMongoSession(); err != nil {
-		return ReportData{}, err
-	}
-
-	session := session.Copy()
-	defer session.Close()
-
-	coll := session.DB("systera").C("reports")
-
-	nowtime := time.Now().UnixNano() / int64(time.Millisecond)
-
-	fromUser, findErr := FindPlayer(from.UUID)
+func (s *Mysql) SetReport(from, to PlayerIdentity, message string) (Report, error) {
+	fromUser, findErr := s.FindPlayer(from.UUID)
 	if findErr != nil {
 		logrus.WithError(findErr).Errorf("[Report] Error @ SetReport")
-		return ReportData{}, findErr
+		return Report{}, findErr
 	}
 
-	reportData := &ReportData{
+	nowtime := time.Now().UnixNano() / int64(time.Millisecond)
+	report := &Report{
 		Message:      message,
-		Date:         nowtime,
+		Data:         nowtime,
 		Server:       fromUser.Stats.CurrentServer,
 		ReportedFrom: from,
 		ReportedTo:   to,
 	}
+	result := s.client.Create(report)
 
-	err := coll.Insert(&reportData)
-	if err != nil {
-		logrus.WithError(err).Errorf("[Report] Error @ SetReport")
-		return ReportData{}, err
+	if result.Error != nil {
+		logrus.WithError(result.Error).Errorf("[Report] Error @ SetReport")
+		return Report{}, result.Error
 	}
 
 	logrus.WithFields(logrus.Fields{
@@ -55,5 +44,6 @@ func SetReport(from, to PlayerIdentity, message string) (ReportData, error) {
 		"to":      to,
 		"message": message,
 	}).Infof("[Report] Reported")
-	return *reportData, nil
+
+	return *report, nil
 }
