@@ -3,9 +3,9 @@ package database
 import (
 	"time"
 
-	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
 	"github.com/synchthia/systera-api/systerapb"
+	"gorm.io/gorm"
 )
 
 // PunishLevel - Punishment level
@@ -29,19 +29,19 @@ const (
 )
 
 // PunishmentData - PunishData on Database
-type PunishmentData struct {
-	ID           bson.ObjectId  `bson:"_id,omitempty"`
-	Available    bool           `bson:"available"`
-	Level        PunishLevel    `bson:"level"`
-	Reason       string         `bson:"reason"`
-	Date         int64          `bson:"date"`
-	Expire       int64          `bson:"expire,omitempty"`
-	PunishedFrom PlayerIdentity `bson:"punished_from"`
-	PunishedTo   PlayerIdentity `bson:"punished_to"`
+type Punishments struct {
+	ID           int32 `gorm:"primary_key;AutoIncrement;"`
+	Available    bool
+	Level        PunishLevel `gorm:"type:tinyint;"`
+	Reason       string
+	Date         int64
+	Expire       int64
+	PunishedFrom PlayerIdentity `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	PunishedTo   PlayerIdentity `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 // ToProtobuf - Convert to Protobuf
-func (p *PunishmentData) ToProtobuf() *systerapb.PunishEntry {
+func (p *Punishments) ToProtobuf() *systerapb.PunishEntry {
 	return &systerapb.PunishEntry{
 		Available:    p.Available,
 		Level:        p.Level.ToProtobuf(),
@@ -93,48 +93,32 @@ func (i PunishLevel) ToProtobuf() systerapb.PunishLevel {
 }
 
 // GetPlayerPunishment - Get Player Punishment History
-func GetPlayerPunishment(playerUUID string, filterLevel PunishLevel, includeExpired bool) ([]PunishmentData, error) {
-	if _, err := GetMongoSession(); err != nil {
-		return nil, err
-	}
-
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("punishments")
+func (s *Mysql) GetPlayerPunishment(playerUUID string, filterLevel PunishLevel, includeExpired bool) ([]Punishments, error) {
+	var punishments []Punishments
 
 	nowtime := time.Now().UnixNano() / int64(time.Millisecond)
 
-	var lookup []PunishmentData
-
 	if includeExpired == true {
-		err := coll.Find(
-			bson.M{
-				"punished_to.uuid": playerUUID,
-				"level":            bson.M{"$gte": filterLevel},
-			}).All(&lookup)
-		if err != nil {
-			logrus.WithError(err).Errorf("[Punish] Failed GetPlayerPunishment(%s)", playerUUID)
-			return nil, err
+		r := s.client.Model(&Punishments{}).Joins("PunishedTo").
+			Find(&punishments, "PunishedTo.uuid = ? AND level >= ?", playerUUID, filterLevel)
+		if r.Error != nil {
+			logrus.WithError(r.Error).Errorf("[Punish] Failed GetPlayerPunishment(%s)", playerUUID)
+			return nil, r.Error
 		}
 	} else {
-		err := coll.Find(
-			bson.M{
-				"punished_to.uuid": playerUUID,
-				"level":            bson.M{"$gte": filterLevel},
-				"available":        true,
-				"$or":              []bson.M{{"expire": bson.M{"$exists": false}}, {"expire": bson.M{"$gte": nowtime}}},
-			}).All(&lookup)
-		if err != nil {
-			logrus.WithError(err).Errorf("[Punish] Failed GetPlayerPunishment(%s)", playerUUID)
-			return nil, err
-
+		r := s.client.Model(&Punishments{}).Joins("PunishedTo").
+			Find(&punishments, "PunishedTo.uuid = ? AND level >= ? AND available = true AND expire = 0 OR expire >= ?", playerUUID, filterLevel, nowtime)
+		if r.Error != nil {
+			logrus.WithError(r.Error).Errorf("[Punish] Failed GetPlayerPunishment(%s)", playerUUID)
+			return nil, r.Error
 		}
 	}
-	return lookup, nil
+
+	return punishments, nil
 }
 
 // SetPlayerPunishment - Punish Player
-func SetPlayerPunishment(force bool, from, to PlayerIdentity, level PunishLevel, reason string, date, expire int64) (success bool, result PunishRule, err error) {
+func (s *Mysql) SetPlayerPunishment(force bool, from, to PlayerIdentity, level PunishLevel, reason string, date, expire int64) (success bool, result PunishRule, err error) {
 	// Error Status
 	success = false
 	result = PunishRule{
@@ -143,15 +127,8 @@ func SetPlayerPunishment(force bool, from, to PlayerIdentity, level PunishLevel,
 		Cooldown:  false,
 		Offline:   false,
 	}
-	if _, err := GetMongoSession(); err != nil {
-		return success, result, err
-	}
 
-	session := session.Copy()
-	defer session.Close()
-
-	punishColl := session.DB("systera").C("punishments")
-	availableBan, err := GetPlayerPunishment(to.UUID, TEMPBAN, false)
+	availableBan, _ := s.GetPlayerPunishment(to.UUID, TEMPBAN, false)
 	for _, ban := range availableBan {
 		if ban.Level == PERMBAN {
 			result.Duplicate = true
@@ -161,20 +138,17 @@ func SetPlayerPunishment(force bool, from, to PlayerIdentity, level PunishLevel,
 			result.Cooldown = true
 		}
 	}
+	var player Players
+	r := s.client.Model(&Players{}).Preload("Groups").Preload("Stats").Preload("KnownUsernames").Preload("KnownUsernameLower").Preload("KnownAddresses").Preload("Settings").First(&player, "uuid = ?", to.UUID)
 
-	playerData := PlayerData{}
-	playerQuery := session.DB("systera").C("players").Find(bson.M{"uuid": to.UUID})
-	playerCnt, playerCntErr := playerQuery.Count()
-	if playerCntErr != nil {
-		return success, result, playerCntErr
+	if r.Error != nil && r.Error != gorm.ErrRecordNotFound {
+		return success, result, r.Error
 	}
 
-	if playerCnt == 0 {
+	if r.Error != nil && r.Error == gorm.ErrRecordNotFound {
 		result.NoProfile = true
 	} else {
-		playerQuery.One(&playerData)
-
-		if playerData.Stats.CurrentServer == "" {
+		if player.Stats.CurrentServer == "" {
 			result.Offline = true
 		}
 	}
@@ -206,7 +180,7 @@ func SetPlayerPunishment(force bool, from, to PlayerIdentity, level PunishLevel,
 		}
 	}
 
-	punishData := PunishmentData{
+	punishData := Punishments{
 		Available:    true,
 		Level:        level,
 		Reason:       reason,
@@ -216,9 +190,10 @@ func SetPlayerPunishment(force bool, from, to PlayerIdentity, level PunishLevel,
 		PunishedTo:   to,
 	}
 
-	err = punishColl.Insert(&punishData)
-	if err != nil {
-		logrus.WithError(err).Errorf("[Punish] Failed Punish Player")
+	r = s.client.Create(&punishData)
+
+	if r.Error != nil {
+		logrus.WithError(r.Error).Errorf("[Punish] Failed Punish Player")
 		return
 	}
 

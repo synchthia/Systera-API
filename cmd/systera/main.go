@@ -12,12 +12,12 @@ import (
 	"github.com/synchthia/systera-api/stream"
 )
 
-func startGRPC(port string) error {
+func startGRPC(port string, mysql *database.Mysql) error {
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		return err
 	}
-	return server.NewGRPCServer().Serve(lis)
+	return server.NewGRPCServer(mysql).Serve(lis)
 }
 
 func main() {
@@ -36,12 +36,12 @@ func main() {
 		stream.NewRedisPool(redisAddr)
 	}()
 
-	// MongoDB
-	mongoAddr := os.Getenv("MONGO_ADDRESS")
-	if len(mongoAddr) == 0 {
-		mongoAddr = "localhost:27017"
+	// Connect to MySQL
+	mysqlConStr := os.Getenv("MYSQL_CONNECTION_STRING")
+	if len(mysqlConStr) == 0 {
+		mysqlConStr = "root:docker@tcp(localhost:3306)/systera?charset=utf8mb4&parseTime=True&loc=Local"
 	}
-	database.NewMongoSession(mongoAddr)
+	mysqlClient := database.NewMysqlClient(mysqlConStr, "systera")
 
 	// gRPC
 	wait := make(chan struct{})
@@ -55,7 +55,7 @@ func main() {
 		msg := logrus.WithField("listen", port)
 		msg.Infof("[GRPC] Listening %s", port)
 
-		if err := startGRPC(port); err != nil {
+		if err := startGRPC(port, mysqlClient); err != nil {
 			logrus.Fatalf("[GRPC] gRPC Error: %s", err)
 		}
 	}()
