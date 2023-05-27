@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -30,27 +31,16 @@ const (
 
 // PunishmentData - PunishData on Database
 type Punishments struct {
-	ID           int32 `gorm:"primary_key;AutoIncrement;"`
-	Available    bool
-	Level        PunishLevel `gorm:"type:tinyint;"`
-	Reason       string
-	Date         int64
-	Expire       int64
-	PunishedFrom PlayerIdentity `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	PunishedTo   PlayerIdentity `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-}
-
-// ToProtobuf - Convert to Protobuf
-func (p *Punishments) ToProtobuf() *systerapb.PunishEntry {
-	return &systerapb.PunishEntry{
-		Available:    p.Available,
-		Level:        p.Level.ToProtobuf(),
-		Reason:       p.Reason,
-		Date:         p.Date,
-		Expire:       p.Expire,
-		PunishedFrom: p.PunishedFrom.ToProtobuf(),
-		PunishedTo:   p.PunishedTo.ToProtobuf(),
-	}
+	ID                 uint `gorm:"primary_key;AutoIncrement;"`
+	Available          bool
+	Level              PunishLevel `gorm:"type:tinyint;"`
+	Reason             string
+	Date               time.Time `gorm:"type:datetime"`
+	Expire             time.Time `gorm:"type:datetime"`
+	PunisherPlayerUUID string
+	PunisherPlayerName string
+	TargetPlayerUUID   string `gorm:"index;"`
+	TargetPlayerName   string
 }
 
 // PunishRule - Validation Rules (true -> Permit)
@@ -59,6 +49,25 @@ type PunishRule struct {
 	Duplicate bool
 	Cooldown  bool
 	Offline   bool
+}
+
+// ToProtobuf - Convert to Protobuf
+func (p *Punishments) ToProtobuf() *systerapb.PunishEntry {
+	return &systerapb.PunishEntry{
+		Available: p.Available,
+		Level:     p.Level.ToProtobuf(),
+		Reason:    p.Reason,
+		Date:      p.Date.UnixMilli(),
+		Expire:    p.Expire.UnixMilli(),
+		PunishedFrom: &systerapb.PlayerIdentity{
+			Uuid: p.PunisherPlayerUUID,
+			Name: p.PunisherPlayerName,
+		},
+		PunishedTo: &systerapb.PlayerIdentity{
+			Uuid: p.TargetPlayerUUID,
+			Name: p.TargetPlayerName,
+		},
+	}
 }
 
 func (i PunishLevel) String() string {
@@ -96,18 +105,23 @@ func (i PunishLevel) ToProtobuf() systerapb.PunishLevel {
 func (s *Mysql) GetPlayerPunishment(playerUUID string, filterLevel PunishLevel, includeExpired bool) ([]Punishments, error) {
 	var punishments []Punishments
 
-	nowtime := time.Now().UnixNano() / int64(time.Millisecond)
+	nowtime := time.Now()
 
-	if includeExpired == true {
-		r := s.client.Model(&Punishments{}).Joins("PunishedTo").
-			Find(&punishments, "PunishedTo.uuid = ? AND level >= ?", playerUUID, filterLevel)
+	// All results must be sorted this rules...
+	// - level: low_level -> high_level
+	// - date: old_date -> now_date
+	if includeExpired {
+		r := s.client.Model(&Punishments{}).
+			Order("date ASC").
+			Find(&punishments, "target_player_uuid = ? AND level >= ?", playerUUID, filterLevel)
 		if r.Error != nil {
 			logrus.WithError(r.Error).Errorf("[Punish] Failed GetPlayerPunishment(%s)", playerUUID)
 			return nil, r.Error
 		}
 	} else {
-		r := s.client.Model(&Punishments{}).Joins("PunishedTo").
-			Find(&punishments, "PunishedTo.uuid = ? AND level >= ? AND available = true AND expire = 0 OR expire >= ?", playerUUID, filterLevel, nowtime)
+		r := s.client.Model(&Punishments{}).
+			Order("date ASC").
+			Find(&punishments, "target_player_uuid = ? AND level >= ? AND available = true AND expire = '1970-01-01' OR expire >= ?", playerUUID, filterLevel, nowtime)
 		if r.Error != nil {
 			logrus.WithError(r.Error).Errorf("[Punish] Failed GetPlayerPunishment(%s)", playerUUID)
 			return nil, r.Error
@@ -132,6 +146,7 @@ func (s *Mysql) SetPlayerPunishment(force bool, from, to PlayerIdentity, level P
 	for _, ban := range availableBan {
 		if ban.Level == PERMBAN {
 			result.Duplicate = true
+			return
 		}
 
 		if level <= TEMPBAN && ban.Level == TEMPBAN {
@@ -139,7 +154,7 @@ func (s *Mysql) SetPlayerPunishment(force bool, from, to PlayerIdentity, level P
 		}
 	}
 	var player Players
-	r := s.client.Model(&Players{}).Preload("Groups").Preload("Stats").Preload("KnownUsernames").Preload("KnownUsernameLower").Preload("KnownAddresses").Preload("Settings").First(&player, "uuid = ?", to.UUID)
+	r := s.client.Model(&Players{}).Preload("Settings").First(&player, "uuid = ?", to.UUID)
 
 	if r.Error != nil && r.Error != gorm.ErrRecordNotFound {
 		return success, result, r.Error
@@ -148,7 +163,7 @@ func (s *Mysql) SetPlayerPunishment(force bool, from, to PlayerIdentity, level P
 	if r.Error != nil && r.Error == gorm.ErrRecordNotFound {
 		result.NoProfile = true
 	} else {
-		if player.Stats.CurrentServer == "" {
+		if player.CurrentServer == "" {
 			result.Offline = true
 		}
 	}
@@ -161,9 +176,7 @@ func (s *Mysql) SetPlayerPunishment(force bool, from, to PlayerIdentity, level P
 
 	// Duplicate
 	if result.Duplicate {
-		if level == TEMPBAN || level == PERMBAN {
-			return
-		}
+		return
 	}
 
 	// Cooldown
@@ -181,13 +194,15 @@ func (s *Mysql) SetPlayerPunishment(force bool, from, to PlayerIdentity, level P
 	}
 
 	punishData := Punishments{
-		Available:    true,
-		Level:        level,
-		Reason:       reason,
-		Date:         date,
-		Expire:       expire,
-		PunishedFrom: from,
-		PunishedTo:   to,
+		Available:          true,
+		Level:              level,
+		Reason:             reason,
+		Date:               time.UnixMilli(date),
+		Expire:             time.UnixMilli(expire),
+		PunisherPlayerUUID: from.UUID,
+		PunisherPlayerName: from.Name,
+		TargetPlayerUUID:   to.UUID,
+		TargetPlayerName:   to.Name,
 	}
 
 	r = s.client.Create(&punishData)
@@ -209,4 +224,24 @@ func (s *Mysql) SetPlayerPunishment(force bool, from, to PlayerIdentity, level P
 	}).Infof("[Punishment] %s -> %s", from.Name, to.Name)
 
 	return true, result, err
+}
+
+// UnBan - Disable available tempban/permban
+func (s *Mysql) UnBan(targetUUID string) error {
+	p, err := s.GetPlayerPunishment(targetUUID, TEMPBAN, false)
+	if err != nil {
+		return err
+	}
+
+	// Get latest
+	if len(p) == 0 {
+		return errors.New("player not punished")
+	}
+
+	latest := p[len(p)-1]
+	latest.Available = false
+
+	// r := s.client.Model(&latest).Update("available", false)
+	r := s.client.Save(&latest)
+	return r.Error
 }

@@ -8,13 +8,16 @@ import (
 )
 
 // PublishPunish - Publish Punish
-func PublishPunish(data *systerapb.PunishEntry) {
+func PublishPunish(remote bool, data *systerapb.PunishEntry) {
 	c := pool.Get()
 	defer c.Close()
 
 	d := &systerapb.PunishmentStream{
-		Type:        systerapb.PunishmentStream_PUNISH,
-		PunishEntry: data,
+		Type: systerapb.PunishmentStream_PUNISH,
+		PunishStreamEntry: &systerapb.PunishStreamEntry{
+			Entry:          data,
+			RequireExecute: remote,
+		},
 	}
 	serialized, _ := json.Marshal(&d)
 	logrus.Debugln(d)

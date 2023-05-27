@@ -40,17 +40,12 @@ func NewMysqlClient(mysqlConStr, database string) *Mysql {
 		return nil
 	}
 
-	if err := m.client.AutoMigrate(&PermissionsData{}); err != nil {
+	if err := m.client.AutoMigrate(&Permissions{}); err != nil {
 		logrus.Fatalf("[MySQL] Failed to migrate: %s", err)
 		return nil
 	}
 
 	if err := m.client.AutoMigrate(&Players{}); err != nil {
-		logrus.Fatalf("[MySQL] Failed to migrate: %s", err)
-		return nil
-	}
-
-	if err := m.client.AutoMigrate(&PlayerStats{}); err != nil {
 		logrus.Fatalf("[MySQL] Failed to migrate: %s", err)
 		return nil
 	}
@@ -66,21 +61,6 @@ func NewMysqlClient(mysqlConStr, database string) *Mysql {
 	}
 
 	if err := m.client.AutoMigrate(&KnownUsernames{}); err != nil {
-		logrus.Fatalf("[MySQL] Failed to migrate: %s", err)
-		return nil
-	}
-
-	if err := m.client.AutoMigrate(&KnownUsernameLower{}); err != nil {
-		logrus.Fatalf("[MySQL] Failed to migrate: %s", err)
-		return nil
-	}
-
-	if err := m.client.AutoMigrate(&GroupNames{}); err != nil {
-		logrus.Fatalf("[MySQL] Failed to migrate: %s", err)
-		return nil
-	}
-
-	if err := m.client.AutoMigrate(&PlayerIdentity{}); err != nil {
 		logrus.Fatalf("[MySQL] Failed to migrate: %s", err)
 		return nil
 	}

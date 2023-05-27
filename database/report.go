@@ -8,29 +8,26 @@ import (
 
 // ReportData - Report Data on Database
 type Report struct {
-	ID           int32 `gorm:"primary_key;AutoIncrement;"`
-	Message      string
-	Data         int64
-	Server       string
-	ReportedFrom PlayerIdentity `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	ReportedTo   PlayerIdentity `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	ID                 uint      `gorm:"primary_key;AutoIncrement;"`
+	Date               time.Time `gorm:"type:datetime"`
+	Message            string
+	Server             string
+	ReporterPlayerUUID string `gorm:"index;"`
+	ReporterPlayerName string
+	TargetPlayerUUID   string `gorm:"index;"`
+	TargetPlayerName   string
 }
 
 // SetReport - Set Report Data
-func (s *Mysql) SetReport(from, to PlayerIdentity, message string) (Report, error) {
-	fromUser, findErr := s.FindPlayer(from.UUID)
-	if findErr != nil {
-		logrus.WithError(findErr).Errorf("[Report] Error @ SetReport")
-		return Report{}, findErr
-	}
-
-	nowtime := time.Now().UnixNano() / int64(time.Millisecond)
+func (s *Mysql) SetReport(from, to PlayerIdentity, server, message string) (Report, error) {
 	report := &Report{
-		Message:      message,
-		Data:         nowtime,
-		Server:       fromUser.Stats.CurrentServer,
-		ReportedFrom: from,
-		ReportedTo:   to,
+		Date:               time.Now().UTC(),
+		Message:            message,
+		Server:             server,
+		ReporterPlayerUUID: from.UUID,
+		ReporterPlayerName: from.Name,
+		TargetPlayerUUID:   to.UUID,
+		TargetPlayerName:   to.Name,
 	}
 	result := s.client.Create(report)
 

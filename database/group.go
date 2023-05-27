@@ -9,18 +9,18 @@ import (
 
 // Group - Permission Group Data
 type Groups struct {
-	ID          int32  `gorm:"primary_key;AutoIncrement;"`
+	ID          uint   `gorm:"primary_key;AutoIncrement;"`
 	Name        string `gorm:"index;not null;"`
 	Prefix      string
-	Permissions []PermissionsData `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Permissions []Permissions `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
-// PermissionsData - Permission Data
-type PermissionsData struct {
-	ID         int32  `gorm:"primary_key;AutoIncrement;"`
-	GroupsID   int32  // foreignKey
+// Permissions - Permission Data
+type Permissions struct {
+	ID         uint   `gorm:"primary_key;AutoIncrement;"`
+	GroupsID   uint   `gorm:"foreign_key"` // foreignKey
 	ServerName string `gorm:"primary_key;"`
-	Parmission string
+	Permission string `gorm:"unique;"`
 }
 
 // ToProtobuf - Convert to Protobuf
@@ -31,11 +31,12 @@ func (g *Groups) ToProtobuf(serverName string) *systerapb.GroupEntry {
 	}
 
 	for _, p := range g.Permissions {
-		if serverName != "" && p.ServerName == serverName {
-			e.ServerPerms = append(e.ServerPerms, p.Parmission)
-		}
 		if p.ServerName == "global" {
-			e.GlobalPerms = append(e.GlobalPerms, p.Parmission)
+			e.GlobalPerms = append(e.GlobalPerms, p.Permission)
+		}
+
+		if serverName != "global" && p.ServerName == serverName {
+			e.ServerPerms = append(e.ServerPerms, p.Permission)
 		}
 	}
 
@@ -45,7 +46,7 @@ func (g *Groups) ToProtobuf(serverName string) *systerapb.GroupEntry {
 // GetGroupData - Get Group Entry
 func (s *Mysql) GetGroupData(name string) (Groups, error) {
 	group := Groups{}
-	r := s.client.Find(&group, "name = ?", name)
+	r := s.client.Preload("Permissions").Find(&group, "name = ?", name)
 	if r.Error != nil {
 		return Groups{}, r.Error
 	}
@@ -86,7 +87,7 @@ func (s *Mysql) CreateGroup(group Groups) error {
 
 // RemoveGroup - Remove Group
 func (s *Mysql) RemoveGroup(groupName string) error {
-	r := s.client.Select("PermissionsData").Delete(&Groups{}, "name = ?", groupName)
+	r := s.client.Select("Permissions").Delete(&Groups{}, "name = ?", groupName)
 	if r.Error != nil {
 		return r.Error
 	}
@@ -97,19 +98,19 @@ func (s *Mysql) RemoveGroup(groupName string) error {
 // AddPermission - Add Permission
 func (s *Mysql) AddPermission(groupName, target string, permissions []string) error {
 	var group Groups
-	r := s.client.First(&group, "name = ?", groupName)
+	r := s.client.Preload("Permissions").First(&group, "name = ?", groupName)
 	if r.Error != nil {
 		return r.Error
 	}
 
-	var dbPerms []PermissionsData
+	var dbPerms []Permissions
 	for _, v := range permissions {
-		parm := PermissionsData{
+		perm := Permissions{
 			GroupsID:   group.ID,
 			ServerName: target,
-			Parmission: v,
+			Permission: v,
 		}
-		dbPerms = append(dbPerms, parm)
+		dbPerms = append(dbPerms, perm)
 	}
 
 	result := s.client.Create(&dbPerms)
@@ -124,13 +125,13 @@ func (s *Mysql) AddPermission(groupName, target string, permissions []string) er
 // RemovePermission - Remove Permission
 func (s *Mysql) RemovePermission(groupName, target string, permissions []string) error {
 	var group Groups
-	r := s.client.First(&group, "name = ?", groupName)
+	r := s.client.Preload("Permissions").First(&group, "name = ?", groupName)
 	if r.Error != nil {
 		return r.Error
 	}
 
 	for _, v := range permissions {
-		result := s.client.Delete(&PermissionsData{}, "groups_id = ? and server_name = ? and parmission = ?", group.ID, target, v)
+		result := s.client.Delete(&Permissions{}, "groups_id = ? and server_name = ? and permission = ?", group.ID, target, v)
 		if result.Error != nil {
 			return result.Error
 		}

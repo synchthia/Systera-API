@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>net.synchthia.api</groupId>
     <artifactId>systera</artifactId>
-    <version>1.0</version>
+    <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -20,20 +20,26 @@
         </repository>
 
         <repository>
-            <id>synchthia-repo</id>
-            <url>https://repo.synchthia.net/repository/startail/</url>
+            <id>artifact-registry</id>
+            <url>artifactregistry://asia-northeast1-maven.pkg.dev/startail-io/startail-public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </repositories>
 
     <distributionManagement>
-        <repository>
-            <id>synchthia-repo</id>
-            <url>https://repo.synchthia.net/repository/startail-releases/</url>
-        </repository>
         <snapshotRepository>
-            <id>synchthia-repo</id>
-            <url>https://repo.synchthia.net/repository/startail-snapshots/</url>
+            <id>artifact-registry</id>
+            <url>artifactregistry://asia-northeast1-maven.pkg.dev/startail-io/startail-public</url>
         </snapshotRepository>
+        <repository>
+            <id>artifact-registry</id>
+            <url>artifactregistry://asia-northeast1-maven.pkg.dev/startail-io/startail-public</url>
+        </repository>
     </distributionManagement>
 
     <dependencies>
@@ -62,6 +68,11 @@
     <build>
         <extensions>
             <extension>
+                <groupId>com.google.cloud.artifactregistry</groupId>
+                <artifactId>artifactregistry-maven-wagon</artifactId>
+                <version>2.2.0</version>
+            </extension>
+            <extension>
                 <groupId>kr.motd.maven</groupId>
                 <artifactId>os-maven-plugin</artifactId>
                 <version>1.5.0.Final</version>
@@ -89,7 +100,8 @@
                 <configuration>
                     <protocArtifact>com.google.protobuf:protoc:3.6.1:exe:${os.detected.classifier}</protocArtifact>
                     <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.19.0:exe:${os.detected.classifier}</pluginArtifact>
+                    <pluginArtifact>
+                        io.grpc:protoc-gen-grpc-java:1.19.0:exe:${os.detected.classifier}</pluginArtifact>
                 </configuration>
                 <executions>
                     <execution>
@@ -111,7 +123,8 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
+                            <dependencyReducedPomLocation>
+                                ${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
                             <!-- when downloading via Maven we can pull depends individually -->
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                         </configuration>
