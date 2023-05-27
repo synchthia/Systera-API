@@ -164,7 +164,7 @@ func (s *Mysql) InitPlayerProfile(uuid, name, ipAddress, hostname string) (*Play
 		player.FirstLogin = nowtime
 		player.Settings = PlayerSettings{
 			JoinMessage: true,
-			Japanize:    false,
+			Japanize:    true,
 			Vanish:      false,
 			GlobalChat:  true,
 		}
