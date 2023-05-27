@@ -4,7 +4,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/minotar/minecraft"
 	"github.com/sirupsen/logrus"
 	"github.com/synchthia/systera-api/systerapb"
@@ -14,9 +13,9 @@ import (
 
 // PlayerData - PlayerProfile on Database
 type Players struct {
-	ID            uuid.UUID `gorm:"type:uuid;default:UUID();"`
-	UUID          string    `gorm:"index;unique;"`
-	Name          string    `gorm:"index;not null;"`
+	ID            uint   `gorm:"primary_key;AutoIncrement;"`
+	UUID          string `gorm:"index;unique;"`
+	Name          string `gorm:"index;not null;"`
 	NameLower     string
 	CurrentServer string
 	FirstLogin    time.Time `gorm:"type:datetime"`
@@ -40,7 +39,7 @@ func (p *Players) ToProtobuf() *systerapb.PlayerEntry {
 
 // PlayerSettings - Settings in PlayerProfile
 type PlayerSettings struct {
-	PlayersID   uuid.UUID `gorm:"foreign_key;unique;type:uuid;default:UUID();"` // foreignKey
+	PlayersID   uint `gorm:"foreign_key;unique;"` // foreignKey
 	JoinMessage bool
 	Vanish      bool
 	Japanize    bool
