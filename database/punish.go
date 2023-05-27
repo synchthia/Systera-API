@@ -121,7 +121,7 @@ func (s *Mysql) GetPlayerPunishment(playerUUID string, filterLevel PunishLevel, 
 	} else {
 		r := s.client.Model(&Punishments{}).
 			Order("date ASC").
-			Find(&punishments, "target_player_uuid = ? AND level >= ? AND available = true AND expire = '1970-01-01' OR expire >= ?", playerUUID, filterLevel, nowtime)
+			Find(&punishments, "target_player_uuid = ? AND level >= ? AND available = true AND expire <= '1970-01-02' OR expire >= ?", playerUUID, filterLevel, nowtime)
 		if r.Error != nil {
 			logrus.WithError(r.Error).Errorf("[Punish] Failed GetPlayerPunishment(%s)", playerUUID)
 			return nil, r.Error
