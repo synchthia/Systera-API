@@ -22,7 +22,6 @@ type Players struct {
 	FirstLogin    time.Time `gorm:"type:datetime"`
 	LastLogin     time.Time `gorm:"type:datetime"`
 	Groups        string
-	IgnoreList []
 	Settings      PlayerSettings `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
