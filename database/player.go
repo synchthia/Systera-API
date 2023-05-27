@@ -4,43 +4,68 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/minotar/minecraft"
-	"github.com/synchthia/systera-api/systerapb"
-
-	"github.com/globalsign/mgo/bson"
 	"github.com/sirupsen/logrus"
+	"github.com/synchthia/systera-api/systerapb"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // PlayerData - PlayerProfile on Database
-type PlayerData struct {
-	ID                 bson.ObjectId     `bson:"_id,omitempty"`
-	UUID               string            `bson:"uuid" json:"id"`
-	Name               string            `bson:"name"`
-	NameLower          string            `bson:"name_lower"`
-	Groups             []string          `bson:"groups"`
-	Stats              PlayerStats       `bson:"stats"`
-	KnownUsernames     map[string]int64  `bson:"known_usernames"`
-	KnownUsernameLower map[string]int64  `bson:"known_usernames_lower"`
-	KnownAddresses     []PlayerAddresses `bson:"known_addresses"`
-	Settings           *PlayerSettings   `bson:"settings,omitempty"`
+type Players struct {
+	ID            uuid.UUID `gorm:"type:uuid;default:UUID();"`
+	UUID          string    `gorm:"index;unique;"`
+	Name          string    `gorm:"index;not null;"`
+	NameLower     string
+	CurrentServer string
+	FirstLogin    time.Time `gorm:"type:datetime"`
+	LastLogin     time.Time `gorm:"type:datetime"`
+	Groups        string
+	IgnoreList []
+	Settings      PlayerSettings `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 // ToProtobuf - Convert to Protobuf Entry
-func (p *PlayerData) ToProtobuf() *systerapb.PlayerEntry {
+func (p *Players) ToProtobuf() *systerapb.PlayerEntry {
 	return &systerapb.PlayerEntry{
-		Uuid:     p.UUID,
-		Name:     p.Name,
-		Groups:   p.Groups,
-		Settings: p.Settings.ToProtobuf(),
-		Stats:    p.Stats.ToProtobuf(),
+		Uuid:          p.UUID,
+		Name:          p.Name,
+		CurrentServer: p.CurrentServer,
+		FirstLogin:    p.FirstLogin.UnixMilli(),
+		LastLogin:     p.LastLogin.UnixMilli(),
+		Groups:        strings.Split(p.Groups, ","),
+		Settings:      p.Settings.ToProtobuf(),
 	}
 }
 
 // PlayerSettings - Settings in PlayerProfile
 type PlayerSettings struct {
-	JoinMessage interface{} `bson:"join_message,omitempty"`
-	Vanish      interface{} `bson:"vanish,omitempty"`
-	Japanize    interface{} `bson:"japanize,omitempty"`
+	PlayersID   uuid.UUID `gorm:"foreign_key;unique;type:uuid;default:UUID();"` // foreignKey
+	JoinMessage bool
+	Vanish      bool
+	Japanize    bool
+	GlobalChat  bool
+}
+
+// ToProtobuf - Convert to Protobuf Entry
+func (s *PlayerSettings) ToProtobuf() *systerapb.PlayerSettings {
+	return &systerapb.PlayerSettings{
+		JoinMessage: s.GetOrDefault(s.JoinMessage, true),
+		Vanish:      s.GetOrDefault(s.Vanish, false),
+		Japanize:    s.GetOrDefault(s.Japanize, true),
+		GlobalChat:  s.GetOrDefault(s.GlobalChat, true),
+	}
+}
+
+// FromProtobuf - Convert from Protobuf Entry
+func (s *PlayerSettings) FromProtobuf(p *systerapb.PlayerSettings) *PlayerSettings {
+	s.JoinMessage = p.JoinMessage
+	s.Vanish = p.Vanish
+	s.Japanize = p.Japanize
+	s.GlobalChat = p.GlobalChat
+
+	return s
 }
 
 // GetOrDefault - Get Value or Default
@@ -51,68 +76,23 @@ func (s PlayerSettings) GetOrDefault(v interface{}, d bool) bool {
 	return d
 }
 
-// ToProtobuf - Convert to Protobuf Entry
-func (s *PlayerSettings) ToProtobuf() *systerapb.PlayerSettings {
-	return &systerapb.PlayerSettings{
-		JoinMessage: s.GetOrDefault(s.JoinMessage, true),
-		Vanish:      s.GetOrDefault(s.Vanish, false),
-		Japanize:    s.GetOrDefault(s.Japanize, false),
-	}
-}
-
-// FromProtobuf - Convert from Protobuf Entry
-func (s *PlayerSettings) FromProtobuf(p *systerapb.PlayerSettings) *PlayerSettings {
-	s.JoinMessage = &p.JoinMessage
-	s.Vanish = &p.Vanish
-	s.Japanize = &p.Japanize
-
-	return s
-}
-
-// TODO: Merge to 'getOrDefault' function when migrated to mongo-go-driver
-// fillAbsent - Fill Default value
-func (s *PlayerSettings) fillAbsent() {
-	s.JoinMessage = s.GetOrDefault(s.JoinMessage, true)
-	s.Vanish = s.GetOrDefault(s.Vanish, false)
-	s.Japanize = s.GetOrDefault(s.Japanize, false)
-}
-
-// PlayerStats - Stats in PlayerProfile
-type PlayerStats struct {
-	CurrentServer string `bson:"current_server"`
-	FirstLogin    int64  `bson:"first_login"`
-	LastLogin     int64  `bson:"last_login"`
-}
-
-// ToProtobuf - Convert to Protobuf Entry
-func (s *PlayerStats) ToProtobuf() *systerapb.PlayerStats {
-	return &systerapb.PlayerStats{
-		CurrentServer: s.CurrentServer,
-		FirstLogin:    s.FirstLogin,
-		LastLogin:     s.LastLogin,
-	}
-}
-
-// PlayerAddresses - Player Address Entries
-type PlayerAddresses struct {
-	Address   string `bson:"address"`
-	Hostname  string `bson:"hostname"`
-	Date      int64  `bson:"date,omitempty"`
-	FirstSeen int64  `bson:"first_seen"`
-	LastSeen  int64  `bson:"last_seen"`
-}
-
 // AltLookupData - AltLookup Result
 type AltLookupData struct {
-	UUID      string            `bson:"uuid"`
-	Name      string            `bson:"name"`
-	Addresses []PlayerAddresses `bson:"addresses"`
+	UUID      string
+	Name      string
+	Addresses []PlayerAddresses
 }
 
 // PlayerIdentity - Player Data Set (Used from ex. punishment, report...)
 type PlayerIdentity struct {
-	UUID string `bson:"uuid"`
-	Name string `bson:"name"`
+	UUID string
+	Name string
+}
+
+// IgnoreEntry - Ignore chat entry
+type IgnoreEntry struct {
+	UUID string `gorm:"foreign_key"`
+	Name string
 }
 
 // ToProtobuf - Convert to Protobuf
@@ -123,44 +103,19 @@ func (pi *PlayerIdentity) ToProtobuf() *systerapb.PlayerIdentity {
 	}
 }
 
-// UUIDToName - Get Player Name from UUID
-func UUIDToName(uuid string) string {
-	if _, err := GetMongoSession(); err != nil {
-		return ""
-	}
-
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
-
-	playerData := PlayerData{}
-	err := coll.Find(bson.M{"uuid": uuid}).One(&playerData)
-	if err != nil {
-		logrus.WithError(err).Errorf("[Player] Failed UUIDToName(%s)", uuid)
-		return ""
-	}
-
-	return playerData.Name
-}
-
 // NameToUUID - Get UUID from Player Name
-func NameToUUID(name string) (string, error) {
-	if _, err := GetMongoSession(); err != nil {
-		return "", err
-	}
-
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
-
-	playerData := PlayerData{}
-	err := coll.Find(bson.M{"name_lower": strings.ToLower(name)}).One(&playerData)
-	if err != nil {
+func (s *Mysql) NameToUUID(name string) (string, error) {
+	var player Players
+	r := s.client.First(&player, "name_lower = ?", strings.ToLower(name))
+	if r.Error != nil && r.Error == gorm.ErrRecordNotFound {
 		uuid, err := NameToUUIDwithMojang(name)
 		return uuid, err
+	} else if r.Error != nil && r.Error != gorm.ErrRecordNotFound {
+		logrus.WithError(r.Error).Errorf("[Player] NTU: Failed Failed get profile %s", name)
+		return "", r.Error
 	}
 
-	return playerData.UUID, nil
+	return player.UUID, nil
 }
 
 // NameToUUIDwithMojang - Get UUID from Mojang API
@@ -174,120 +129,79 @@ func NameToUUIDwithMojang(name string) (string, error) {
 }
 
 // FindPlayer - Find PlayerProfile
-func FindPlayer(uuid string) (PlayerData, error) {
-	if _, err := GetMongoSession(); err != nil {
-		return PlayerData{}, err
+func (s *Mysql) FindPlayer(uuid string) (Players, error) {
+	var player Players
+	r := s.client.Model(&Players{}).Preload("Settings").First(&player, "uuid = ?", uuid)
+	if r.Error != nil {
+		logrus.WithError(r.Error).Errorf("[Player] FP: Failed Failed get profile (%s)", uuid)
+		return Players{}, r.Error
 	}
-
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
-	playerData := PlayerData{}
-
-	err := coll.Find(bson.M{"uuid": uuid}).One(&playerData)
-	return playerData, err
+	return player, nil
 }
 
 // FindPlayerByName - Find PlayerProfile from Name
-func FindPlayerByName(name string) (PlayerData, error) {
-	if _, err := GetMongoSession(); err != nil {
-		return PlayerData{}, err
+func (s *Mysql) FindPlayerByName(name string) (Players, error) {
+	var player Players
+	r := s.client.Model(&Players{}).Preload("Settings").First(&player, "name_lower = ?", strings.ToLower(name))
+	if r.Error != nil {
+		logrus.WithError(r.Error).Errorf("[Player] FPBN: Failed Failed get profile %s", name)
+		return Players{}, r.Error
 	}
-
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
-	playerData := PlayerData{}
-
-	nameLower := strings.ToLower(name)
-	err := coll.Find(bson.M{"name_lower": nameLower}).Sort("-stats.last_login").One(&playerData)
-	return playerData, err
-}
-
-// Migrate
-func Migrate() {
-	// Some Migration are here...
+	return player, nil
 }
 
 // InitPlayerProfile - Initialize Player Profile
-func InitPlayerProfile(uuid, name, ipAddress, hostname string) (*PlayerData, error) {
-	if _, err := GetMongoSession(); err != nil {
-		return nil, err
+func (s *Mysql) InitPlayerProfile(uuid, name, ipAddress, hostname string) (*Players, error) {
+	nowtime := time.Now()
+
+	var player Players
+	r := s.client.Preload("Settings").First(&player, "uuid = ?", uuid)
+	if r.Error != nil && r.Error != gorm.ErrRecordNotFound {
+		logrus.WithError(r.Error).Errorf("[Player] IPP: Failed Failed get profile %s(%s)", name, uuid)
+		return &Players{}, r.Error
 	}
 
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
-
-	nowtime := time.Now().UnixNano() / int64(time.Millisecond)
-
-	profileCnt, err := coll.Find(bson.M{"uuid": uuid}).Count()
-	if err != nil {
-		logrus.WithError(err).Errorf("[Player] IPP: Failed Failed get profile %s(%s)", name, uuid)
-		return nil, err
-	}
-
-	playerData := &PlayerData{}
-
-	if profileCnt == 0 {
+	if r.RowsAffected == 0 {
 		// Initialize
-		playerData.KnownUsernames = make(map[string]int64)
-		playerData.KnownUsernameLower = make(map[string]int64)
-		playerData.Stats.FirstLogin = nowtime
-	} else {
-		coll.Find(bson.M{"uuid": uuid}).One(playerData)
-	}
-
-	// User Profile
-	playerData.UUID = uuid
-	playerData.Name = name
-	playerData.NameLower = strings.ToLower(name)
-	playerData.Stats.LastLogin = nowtime
-
-	// Settings -> Fill Absent Entries
-	playerData.Settings.fillAbsent()
-
-	// Player Groups
-	if len(playerData.Groups) == 0 {
-		playerData.Groups = []string{"default"}
-	}
-
-	// User Log (Address / Name)
-	override := false
-	var newPlayerAddresses []PlayerAddresses
-	for _, v := range playerData.KnownAddresses {
-		if v.Address == ipAddress {
-			newPlayerAddresses = append(newPlayerAddresses, PlayerAddresses{
-				Address:   ipAddress,
-				Hostname:  hostname,
-				FirstSeen: v.FirstSeen,
-				LastSeen:  nowtime,
-			})
-			override = true
-		} else {
-			newPlayerAddresses = append(newPlayerAddresses, v)
+		player.FirstLogin = nowtime
+		player.Settings = PlayerSettings{
+			JoinMessage: true,
+			Japanize:    false,
+			Vanish:      false,
+			GlobalChat:  true,
 		}
 	}
 
-	if !override {
-		newPlayerAddresses = append(newPlayerAddresses, PlayerAddresses{
-			Address:   ipAddress,
-			Hostname:  hostname,
-			FirstSeen: nowtime,
-			LastSeen:  nowtime,
-		})
+	// User Profile
+	player.UUID = uuid
+	player.Name = name
+	player.NameLower = strings.ToLower(name)
+	player.LastLogin = nowtime
+
+	// Player Groups
+	if len(player.Groups) == 0 {
+		player.Groups = "default"
 	}
 
-	playerData.KnownAddresses = newPlayerAddresses
+	// Update address log
+	if err := s.UpdateKnownAddress(uuid, ipAddress, hostname); err != nil {
+		return nil, err
+	}
 
-	playerData.KnownUsernames[name] = nowtime
-	playerData.KnownUsernameLower[strings.ToLower(name)] = nowtime
+	// Update username log
+	if err := s.UpdateKnownUsername(uuid, name); err != nil {
+		return nil, err
+	}
 
-	//coll.Upsert(bson.M{"uuid": uuid}, playerData)
-	coll.Upsert(
-		bson.M{"uuid": uuid},
-		bson.M{"$set": playerData},
-	)
+	result := s.client.Preload("Settings").Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "uuid"}},
+		UpdateAll: true,
+	}).Create(&player)
+
+	if result.Error != nil {
+		logrus.WithError(result.Error).Errorf("[Player] IPP: Failed to create profile %s(%s)", name, uuid)
+		return &Players{}, result.Error
+	}
 
 	logrus.WithFields(logrus.Fields{
 		"name":    name,
@@ -295,79 +209,89 @@ func InitPlayerProfile(uuid, name, ipAddress, hostname string) (*PlayerData, err
 		"address": ipAddress,
 	}).Infof("[Player] InitPlayerProfile")
 
-	return playerData, nil
+	return &player, nil
 }
 
 // SetPlayerGroups - Define Player Groups
-func SetPlayerGroups(uuid string, groups []string) error {
-	if _, err := GetMongoSession(); err != nil {
-		return err
+func (s *Mysql) SetPlayerGroups(uuid string, groups []string) error {
+	var player Players
+	r := s.client.Model(&Players{}).First(&player, "uuid = ?", uuid)
+	if r.Error != nil {
+		logrus.WithError(r.Error).Errorf("[Player] FP: Failed Failed get profile (%s)", uuid)
+		return r.Error
 	}
 
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
-
-	var newGroups []string
-	newGroups = append(newGroups, "default")
+	player.Groups = "default"
 
 	for _, g := range groups {
 		if g != "default" {
-			newGroups = append(newGroups, g)
+			player.Groups += "," + g
 		}
 	}
 
-	err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"groups": newGroups}})
-	if err != nil {
-		logrus.WithError(err).Errorf("[Player] Failed Execute SetPlayerGroups")
-		return err
+	result := s.client.Save(&player)
+
+	if result.Error != nil {
+		logrus.WithError(result.Error).Errorf("[Player] Failed Execute SetPlayerGroups")
+		return result.Error
 	}
 
 	return nil
 }
 
 // SetPlayerServer - Define Player Current Server
-func SetPlayerServer(uuid, server string) error {
-	if _, err := GetMongoSession(); err != nil {
-		return err
+func (s *Mysql) SetPlayerServer(uuid, server string) error {
+	var player Players
+	r := s.client.Model(&Players{}).First(&player, "uuid = ?", uuid)
+	if r.Error != nil {
+		logrus.WithError(r.Error).Errorf("[Player] SPServ: Failed Failed get profile (%s)", uuid)
+		return r.Error
 	}
 
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
+	player.CurrentServer = server
 
-	playerData := PlayerData{}
-	coll.Find(bson.M{"uuid": uuid}).One(&playerData)
+	result := s.client.Save(&player)
 
-	err := coll.Update(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"stats.current_server": server}})
-	if err != nil {
-		logrus.WithError(err).Errorf("[Player] Failed Execute SetPlayerServer")
-		return err
+	if result.Error != nil {
+		logrus.WithError(result.Error).Errorf("[Player] Failed Execute SetPlayerServer")
+		return result.Error
 	}
 
 	logrus.WithFields(logrus.Fields{
 		"server": server,
-	}).Debugf("[Player] Set Server: %s > %s(%s)", server, playerData.Name, uuid)
+	}).Debugf("[Player] Set Server: %s > %s(%s)", server, player.Name, uuid)
 
 	return nil
 }
 
 // SetPlayerSettings - Set Player Settings
-func SetPlayerSettings(uuid string, settings *PlayerSettings) error {
-	if _, err := GetMongoSession(); err != nil {
-		return err
+func (s *Mysql) SetPlayerSettings(uuid string, settings *PlayerSettings) error {
+	var player Players
+	r := s.client.Model(&Players{}).Preload("Settings").First(&player, "uuid = ?", uuid)
+	if r.Error != nil {
+		logrus.WithError(r.Error).Errorf("[Player] SPS: Failed Failed get profile (%s)", uuid)
+		return r.Error
 	}
 
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
+	player.Settings.PlayersID = player.ID
 
-	_, err := coll.Upsert(bson.M{"uuid": uuid}, bson.M{"$set": bson.M{"settings": settings}})
-	if err != nil {
-		logrus.WithError(err).Errorf("[Player] Failed Set Player Settings")
+	// Settings
+	player.Settings.JoinMessage = settings.JoinMessage
+	player.Settings.Vanish = settings.Vanish
+	player.Settings.Japanize = settings.Japanize
+	player.Settings.GlobalChat = settings.GlobalChat
+
+	result := s.client.Clauses((clause.OnConflict{
+		Columns:   []clause.Column{{Name: "players_id"}},
+		UpdateAll: true,
+	})).Create(&player.Settings)
+
+	if result.Error != nil {
+		logrus.WithError(result.Error).Errorf("[Player] Failed Execute SetPlayerSettings %s(%s)", player.Name, uuid)
+		return result.Error
 	}
 
-	return err
+	return nil
 }
 
 // MatchPlayerAddress - Return Matched Address in Array
@@ -381,53 +305,56 @@ func MatchPlayerAddress(playerAddresses []PlayerAddresses, address string) Playe
 }
 
 // AltLookup - AltLookup player accounts
-func AltLookup(uuid string) ([]AltLookupData, error) {
-	if _, err := GetMongoSession(); err != nil {
-		return nil, err
-	}
+func (s *Mysql) AltLookup(playerUUID string) ([]AltLookupData, error) {
+	return nil, nil
+	// // Find Player
+	// var player Players
+	// r := s.client.Model(&Players{}).Preload("Settings").First(&player, "uuid = ?", playerUUID)
+	// if r.Error != nil {
+	// 	logrus.WithError(r.Error).Errorf("[Player] ALU: Failed Failed get profile (%s)", playerUUID)
+	// 	return nil, r.Error
+	// }
 
-	session := session.Copy()
-	defer session.Close()
-	coll := session.DB("systera").C("players")
+	// var altLookupData []AltLookupData
+	// altLookupPair := make(map[string]AltLookupData)
 
-	playerData := PlayerData{}
+	// // Player's KnownAddresses
+	// for _, ipEntry := range player.KnownAddresses {
+	// 	var playerAddressesData []PlayerAddresses
 
-	var altLookupData []AltLookupData
-	//playerAddressPair := make(map[string][]PlayerAddresses)
-	altLookupPair := make(map[string]AltLookupData)
+	// 	r := s.client.Model(&PlayerAddresses{}).Where("address = ?", ipEntry.Address).Find(&playerAddressesData)
+	// 	if r.Error != nil {
+	// 		continue
+	// 	}
 
-	// Find Player
-	err := coll.Find(bson.M{"uuid": uuid}).One(&playerData)
-	if err != nil {
-		return nil, err
-	}
+	// 	var altPlayerData []Players
+	// 	var playerids []uuid.UUID
+	// 	for _, v := range playerAddressesData {
+	// 		playerids = append(playerids, v.PlayersID)
+	// 	}
+	// 	err := s.client.Model(&Players{}).Where("id IN ?", playerids).Find(&altPlayerData)
+	// 	if err.Error != nil {
+	// 		continue
+	// 	}
 
-	// Player's KnownAddresses
-	for _, ipEntry := range playerData.KnownAddresses {
-		var altPlayerData []PlayerData
+	// 	// Loop in Found PlayerData
+	// 	for _, pd := range altPlayerData {
 
-		err := coll.Find(bson.M{"known_addresses.address": ipEntry.Address}).All(&altPlayerData)
-		if err != nil {
-			continue
-		}
+	// 		if pd.UUID == playerUUID {
+	// 			continue
+	// 		}
 
-		// Loop in Found PlayerData
-		for _, pd := range altPlayerData {
-			if pd.UUID == uuid {
-				continue
-			}
+	// 		altLookupPair[pd.UUID] = AltLookupData{
+	// 			UUID:      pd.UUID,
+	// 			Name:      pd.Name,
+	// 			Addresses: append(altLookupPair[pd.UUID].Addresses, MatchPlayerAddress(pd.KnownAddresses, ipEntry.Address)),
+	// 		}
+	// 	}
+	// }
 
-			altLookupPair[pd.UUID] = AltLookupData{
-				UUID:      pd.UUID,
-				Name:      pd.Name,
-				Addresses: append(altLookupPair[pd.UUID].Addresses, MatchPlayerAddress(pd.KnownAddresses, ipEntry.Address)),
-			}
-		}
-	}
+	// for _, v := range altLookupPair {
+	// 	altLookupData = append(altLookupData, v)
+	// }
 
-	for _, v := range altLookupPair {
-		altLookupData = append(altLookupData, v)
-	}
-
-	return altLookupData, nil
+	// return altLookupData, nil
 }
