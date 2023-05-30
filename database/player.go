@@ -6,6 +6,7 @@ import (
 
 	"github.com/minotar/minecraft"
 	"github.com/sirupsen/logrus"
+	"github.com/synchthia/systera-api/status"
 	"github.com/synchthia/systera-api/systerapb"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -22,6 +23,7 @@ type Players struct {
 	LastLogin     time.Time `gorm:"type:datetime"`
 	Groups        string
 	Settings      PlayerSettings `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	IgnoreList    []IgnoreEntry  `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 // ToProtobuf - Convert to Protobuf Entry
@@ -34,6 +36,13 @@ func (p *Players) ToProtobuf() *systerapb.PlayerEntry {
 		LastLogin:     p.LastLogin.UnixMilli(),
 		Groups:        strings.Split(p.Groups, ","),
 		Settings:      p.Settings.ToProtobuf(),
+		PlayerIgnore: func() []*systerapb.PlayerIdentity {
+			var pi []*systerapb.PlayerIdentity
+			for _, ie := range p.IgnoreList {
+				pi = append(pi, ie.ToPlayerIdentity().ToProtobuf())
+			}
+			return pi
+		}(),
 	}
 }
 
@@ -87,12 +96,6 @@ type PlayerIdentity struct {
 	Name string
 }
 
-// IgnoreEntry - Ignore chat entry
-type IgnoreEntry struct {
-	UUID string `gorm:"foreign_key"`
-	Name string
-}
-
 // ToProtobuf - Convert to Protobuf
 func (pi *PlayerIdentity) ToProtobuf() *systerapb.PlayerIdentity {
 	return &systerapb.PlayerIdentity{
@@ -101,19 +104,39 @@ func (pi *PlayerIdentity) ToProtobuf() *systerapb.PlayerIdentity {
 	}
 }
 
+func (pi *PlayerIdentity) ToIgnoreEntry() *IgnoreEntry {
+	return &IgnoreEntry{
+		UUID: pi.UUID,
+		Name: pi.Name,
+	}
+}
+
+// IgnoreEntry - Ignore chat entry
+type IgnoreEntry struct {
+	PlayersID uint   `gorm:"foreign_key;unique;"` // foreignKey
+	UUID      string `gorm:"foreign_key;unique;"`
+	Name      string
+}
+
+func (ie *IgnoreEntry) ToPlayerIdentity() *PlayerIdentity {
+	return &PlayerIdentity{
+		UUID: ie.UUID,
+		Name: ie.Name,
+	}
+}
+
 // NameToUUID - Get UUID from Player Name
 func (s *Mysql) NameToUUID(name string) (string, error) {
-	var player Players
-	r := s.client.First(&player, "name_lower = ?", strings.ToLower(name))
-	if r.Error != nil && r.Error == gorm.ErrRecordNotFound {
+	pi, err := s.GetIdentityByName(name)
+	if err != nil && err == gorm.ErrRecordNotFound {
 		uuid, err := NameToUUIDwithMojang(name)
 		return uuid, err
-	} else if r.Error != nil && r.Error != gorm.ErrRecordNotFound {
-		logrus.WithError(r.Error).Errorf("[Player] NTU: Failed Failed get profile %s", name)
-		return "", r.Error
+	} else if err != nil && err != gorm.ErrRecordNotFound {
+		logrus.WithError(err).Errorf("[Player] NTU: Failed Failed get profile %s", name)
+		return "", err
 	}
 
-	return player.UUID, nil
+	return pi.UUID, nil
 }
 
 // NameToUUIDwithMojang - Get UUID from Mojang API
@@ -129,7 +152,7 @@ func NameToUUIDwithMojang(name string) (string, error) {
 // FindPlayer - Find PlayerProfile
 func (s *Mysql) FindPlayer(uuid string) (Players, error) {
 	var player Players
-	r := s.client.Model(&Players{}).Preload("Settings").First(&player, "uuid = ?", uuid)
+	r := s.client.Model(&Players{}).Preload("IgnoreList").Preload("Settings").First(&player, "uuid = ?", uuid)
 	if r.Error != nil {
 		logrus.WithError(r.Error).Errorf("[Player] FP: Failed Failed get profile (%s)", uuid)
 		return Players{}, r.Error
@@ -140,7 +163,7 @@ func (s *Mysql) FindPlayer(uuid string) (Players, error) {
 // FindPlayerByName - Find PlayerProfile from Name
 func (s *Mysql) FindPlayerByName(name string) (Players, error) {
 	var player Players
-	r := s.client.Model(&Players{}).Preload("Settings").First(&player, "name_lower = ?", strings.ToLower(name))
+	r := s.client.Model(&Players{}).Preload("IgnoreList").Preload("Settings").First(&player, "name_lower = ?", strings.ToLower(name))
 	if r.Error != nil {
 		logrus.WithError(r.Error).Errorf("[Player] FPBN: Failed Failed get profile %s", name)
 		return Players{}, r.Error
@@ -153,7 +176,7 @@ func (s *Mysql) InitPlayerProfile(uuid, name, ipAddress, hostname string) (*Play
 	nowtime := time.Now()
 
 	var player Players
-	r := s.client.Preload("Settings").First(&player, "uuid = ?", uuid)
+	r := s.client.Preload("IgnoreList").Preload("Settings").First(&player, "uuid = ?", uuid)
 	if r.Error != nil && r.Error != gorm.ErrRecordNotFound {
 		logrus.WithError(r.Error).Errorf("[Player] IPP: Failed Failed get profile %s(%s)", name, uuid)
 		return &Players{}, r.Error
@@ -191,7 +214,7 @@ func (s *Mysql) InitPlayerProfile(uuid, name, ipAddress, hostname string) (*Play
 		return nil, err
 	}
 
-	result := s.client.Preload("Settings").Clauses(clause.OnConflict{
+	result := s.client.Preload("IgnoreList").Preload("Settings").Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "uuid"}},
 		UpdateAll: true,
 	}).Create(&player)
@@ -265,7 +288,7 @@ func (s *Mysql) SetPlayerServer(uuid, server string) error {
 // SetPlayerSettings - Set Player Settings
 func (s *Mysql) SetPlayerSettings(uuid string, settings *PlayerSettings) error {
 	var player Players
-	r := s.client.Model(&Players{}).Preload("Settings").First(&player, "uuid = ?", uuid)
+	r := s.client.Model(&Players{}).Preload("IgnoreList").Preload("Settings").First(&player, "uuid = ?", uuid)
 	if r.Error != nil {
 		logrus.WithError(r.Error).Errorf("[Player] SPS: Failed Failed get profile (%s)", uuid)
 		return r.Error
@@ -292,6 +315,47 @@ func (s *Mysql) SetPlayerSettings(uuid string, settings *PlayerSettings) error {
 	return nil
 }
 
+// AddIgnore - Ignore player's activity (chat etc.)
+func (s *Mysql) AddIgnore(uuid string, target *PlayerIdentity) error {
+	var player *Players
+	r := s.client.Model(&player).Preload("IgnoreList").Preload("Settings").First(&player, "uuid = ?", uuid)
+	if r.Error != nil {
+		logrus.WithError(r.Error).Errorf("[Player] AI: Failed AddIgnore: %s", uuid)
+		return r.Error
+	}
+
+	for _, il := range player.IgnoreList {
+		if target.UUID == il.UUID {
+			return status.ErrPlayerAlreadyExists.Error
+		}
+	}
+
+	player.IgnoreList = append(player.IgnoreList, *target.ToIgnoreEntry())
+
+	if r := r.Save(&player); r.Error != nil {
+		return r.Error
+	}
+
+	return nil
+}
+
+// RemoveIgnore - UnIgnore player's activity (chat etc.)
+func (s *Mysql) RemoveIgnore(uuid string, target *PlayerIdentity) error {
+	var player *Players
+	r := s.client.Model(&player).Preload("IgnoreList").Preload("Settings").First(&player, "uuid = ?", uuid)
+	if r.Error != nil {
+		logrus.WithError(r.Error).Errorf("[Player] AI: Failed RemoveIgnore: %s", uuid)
+		return r.Error
+	}
+
+	result := s.client.Delete(&IgnoreEntry{}, "players_id = ? and uuid = ?", player.ID, target.UUID)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
 // MatchPlayerAddress - Return Matched Address in Array
 func MatchPlayerAddress(playerAddresses []PlayerAddresses, address string) PlayerAddresses {
 	for _, v := range playerAddresses {
@@ -307,7 +371,7 @@ func (s *Mysql) AltLookup(playerUUID string) ([]AltLookupData, error) {
 	return nil, nil
 	// // Find Player
 	// var player Players
-	// r := s.client.Model(&Players{}).Preload("Settings").First(&player, "uuid = ?", playerUUID)
+	// r := s.client.Model(&Players{}).Preload("IgnoreList").Preload("Settings").First(&player, "uuid = ?", playerUUID)
 	// if r.Error != nil {
 	// 	logrus.WithError(r.Error).Errorf("[Player] ALU: Failed Failed get profile (%s)", playerUUID)
 	// 	return nil, r.Error

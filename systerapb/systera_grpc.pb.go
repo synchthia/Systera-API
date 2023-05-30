@@ -26,8 +26,10 @@ type SysteraClient interface {
 	Dispatch(ctx context.Context, in *DispatchRequest, opts ...grpc.CallOption) (*Empty, error)
 	// Chat
 	Chat(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (*Empty, error)
-	AddChatIgnore(ctx context.Context, in *AddChatIgnoreRequest, opts ...grpc.CallOption) (*Empty, error)
-	RemoveChatIgnore(ctx context.Context, in *RemoveChatIgnoreRequest, opts ...grpc.CallOption) (*Empty, error)
+	AddChatIgnore(ctx context.Context, in *AddChatIgnoreRequest, opts ...grpc.CallOption) (*ChatIgnoreResponse, error)
+	RemoveChatIgnore(ctx context.Context, in *RemoveChatIgnoreRequest, opts ...grpc.CallOption) (*ChatIgnoreResponse, error)
+	// Player
+	GetPlayerIdentityByName(ctx context.Context, in *GetPlayerIdentityByNameRequest, opts ...grpc.CallOption) (*GetPlayerIdentityByNameResponse, error)
 	InitPlayerProfile(ctx context.Context, in *InitPlayerProfileRequest, opts ...grpc.CallOption) (*InitPlayerProfileResponse, error)
 	FetchPlayerProfile(ctx context.Context, in *FetchPlayerProfileRequest, opts ...grpc.CallOption) (*FetchPlayerProfileResponse, error)
 	FetchPlayerProfileByName(ctx context.Context, in *FetchPlayerProfileByNameRequest, opts ...grpc.CallOption) (*FetchPlayerProfileResponse, error)
@@ -82,8 +84,8 @@ func (c *systeraClient) Chat(ctx context.Context, in *ChatRequest, opts ...grpc.
 	return out, nil
 }
 
-func (c *systeraClient) AddChatIgnore(ctx context.Context, in *AddChatIgnoreRequest, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
+func (c *systeraClient) AddChatIgnore(ctx context.Context, in *AddChatIgnoreRequest, opts ...grpc.CallOption) (*ChatIgnoreResponse, error) {
+	out := new(ChatIgnoreResponse)
 	err := c.cc.Invoke(ctx, "/systerapb.Systera/AddChatIgnore", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -91,9 +93,18 @@ func (c *systeraClient) AddChatIgnore(ctx context.Context, in *AddChatIgnoreRequ
 	return out, nil
 }
 
-func (c *systeraClient) RemoveChatIgnore(ctx context.Context, in *RemoveChatIgnoreRequest, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
+func (c *systeraClient) RemoveChatIgnore(ctx context.Context, in *RemoveChatIgnoreRequest, opts ...grpc.CallOption) (*ChatIgnoreResponse, error) {
+	out := new(ChatIgnoreResponse)
 	err := c.cc.Invoke(ctx, "/systerapb.Systera/RemoveChatIgnore", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systeraClient) GetPlayerIdentityByName(ctx context.Context, in *GetPlayerIdentityByNameRequest, opts ...grpc.CallOption) (*GetPlayerIdentityByNameResponse, error) {
+	out := new(GetPlayerIdentityByNameResponse)
+	err := c.cc.Invoke(ctx, "/systerapb.Systera/GetPlayerIdentityByName", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -261,8 +272,10 @@ type SysteraServer interface {
 	Dispatch(context.Context, *DispatchRequest) (*Empty, error)
 	// Chat
 	Chat(context.Context, *ChatRequest) (*Empty, error)
-	AddChatIgnore(context.Context, *AddChatIgnoreRequest) (*Empty, error)
-	RemoveChatIgnore(context.Context, *RemoveChatIgnoreRequest) (*Empty, error)
+	AddChatIgnore(context.Context, *AddChatIgnoreRequest) (*ChatIgnoreResponse, error)
+	RemoveChatIgnore(context.Context, *RemoveChatIgnoreRequest) (*ChatIgnoreResponse, error)
+	// Player
+	GetPlayerIdentityByName(context.Context, *GetPlayerIdentityByNameRequest) (*GetPlayerIdentityByNameResponse, error)
 	InitPlayerProfile(context.Context, *InitPlayerProfileRequest) (*InitPlayerProfileResponse, error)
 	FetchPlayerProfile(context.Context, *FetchPlayerProfileRequest) (*FetchPlayerProfileResponse, error)
 	FetchPlayerProfileByName(context.Context, *FetchPlayerProfileByNameRequest) (*FetchPlayerProfileResponse, error)
@@ -295,11 +308,14 @@ func (UnimplementedSysteraServer) Dispatch(context.Context, *DispatchRequest) (*
 func (UnimplementedSysteraServer) Chat(context.Context, *ChatRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Chat not implemented")
 }
-func (UnimplementedSysteraServer) AddChatIgnore(context.Context, *AddChatIgnoreRequest) (*Empty, error) {
+func (UnimplementedSysteraServer) AddChatIgnore(context.Context, *AddChatIgnoreRequest) (*ChatIgnoreResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddChatIgnore not implemented")
 }
-func (UnimplementedSysteraServer) RemoveChatIgnore(context.Context, *RemoveChatIgnoreRequest) (*Empty, error) {
+func (UnimplementedSysteraServer) RemoveChatIgnore(context.Context, *RemoveChatIgnoreRequest) (*ChatIgnoreResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveChatIgnore not implemented")
+}
+func (UnimplementedSysteraServer) GetPlayerIdentityByName(context.Context, *GetPlayerIdentityByNameRequest) (*GetPlayerIdentityByNameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlayerIdentityByName not implemented")
 }
 func (UnimplementedSysteraServer) InitPlayerProfile(context.Context, *InitPlayerProfileRequest) (*InitPlayerProfileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitPlayerProfile not implemented")
@@ -450,6 +466,24 @@ func _Systera_RemoveChatIgnore_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SysteraServer).RemoveChatIgnore(ctx, req.(*RemoveChatIgnoreRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Systera_GetPlayerIdentityByName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPlayerIdentityByNameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SysteraServer).GetPlayerIdentityByName(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/systerapb.Systera/GetPlayerIdentityByName",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SysteraServer).GetPlayerIdentityByName(ctx, req.(*GetPlayerIdentityByNameRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -786,6 +820,10 @@ var Systera_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveChatIgnore",
 			Handler:    _Systera_RemoveChatIgnore_Handler,
+		},
+		{
+			MethodName: "GetPlayerIdentityByName",
+			Handler:    _Systera_GetPlayerIdentityByName_Handler,
 		},
 		{
 			MethodName: "InitPlayerProfile",

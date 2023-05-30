@@ -2,10 +2,35 @@ package server
 
 import (
 	"github.com/synchthia/systera-api/database"
+	sts "github.com/synchthia/systera-api/status"
 	"github.com/synchthia/systera-api/stream"
 	pb "github.com/synchthia/systera-api/systerapb"
 	"golang.org/x/net/context"
 )
+
+func (s *grpcServer) GetPlayerIdentityByName(ctx context.Context, e *pb.GetPlayerIdentityByNameRequest) (*pb.GetPlayerIdentityByNameResponse, error) {
+	r, err := s.mysql.GetIdentityByName(e.Name)
+
+	if err != nil {
+		if err == sts.ErrPlayerNotFound.Error {
+			// If just not exists
+			return &pb.GetPlayerIdentityByNameResponse{
+				Exists: false,
+			}, sts.ErrPlayerNotFound.ToGrpcError().Err()
+		} else {
+			// or If has error
+			return &pb.GetPlayerIdentityByNameResponse{
+				Exists: false,
+			}, err
+		}
+	} else {
+		return &pb.GetPlayerIdentityByNameResponse{
+			Identity: r.ToProtobuf(),
+			// Return true when non-nil / false when nil
+			Exists: true,
+		}, nil
+    }
+}
 
 func (s *grpcServer) InitPlayerProfile(ctx context.Context, e *pb.InitPlayerProfileRequest) (*pb.InitPlayerProfileResponse, error) {
 	r, err := s.mysql.InitPlayerProfile(e.Uuid, e.Name, e.IpAddress, e.Hostname)

@@ -4,6 +4,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	"github.com/synchthia/systera-api/status"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -35,4 +38,25 @@ func (s *Mysql) UpdateKnownUsername(playerUUID, username string) error {
 		return r.Error
 	}
 	return nil
+}
+
+func (s *Mysql) GetIdentityByName(username string) (*PlayerIdentity, error) {
+	var col *KnownUsernames
+	r := s.client.Model(&col).
+        Where("username_lower = ?", strings.ToLower(username)).
+        Order("last_used DESC").First(&col)
+
+	if r.Error != nil {
+		if r.Error != gorm.ErrRecordNotFound {
+            logrus.WithError(r.Error).Errorf("[GetIdentity] get identity failed: %v", username)
+			return nil, r.Error
+		} else {
+			return nil, status.ErrPlayerNotFound.Error
+		}
+	}
+
+	return &PlayerIdentity{
+		UUID: col.PlayerUUID,
+		Name: col.Username,
+	}, r.Error
 }

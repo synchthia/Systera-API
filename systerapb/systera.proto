@@ -16,8 +16,12 @@ service Systera {
 
   // Chat
   rpc Chat(ChatRequest) returns (Empty) {}
-  rpc AddChatIgnore(AddChatIgnoreRequest) returns (Empty) {}
-  rpc RemoveChatIgnore(RemoveChatIgnoreRequest) returns (Empty) {}
+  rpc AddChatIgnore(AddChatIgnoreRequest) returns (ChatIgnoreResponse) {}
+  rpc RemoveChatIgnore(RemoveChatIgnoreRequest) returns (ChatIgnoreResponse) {}
+
+  // Player
+  rpc GetPlayerIdentityByName(GetPlayerIdentityByNameRequest)
+      returns (GetPlayerIdentityByNameResponse) {}
 
   rpc InitPlayerProfile(InitPlayerProfileRequest)
       returns (InitPlayerProfileResponse) {}
@@ -51,6 +55,15 @@ service Systera {
 }
 
 /*
+ * API Result
+ */
+enum CallResult {
+  SUCCESS = 0;
+  NOT_FOUND = 1;
+  DUPLICATED = 2;
+}
+
+/*
  * Stream API
  */
 message AnnounceRequest {
@@ -72,8 +85,20 @@ message ChatEntry {
 
 message ChatRequest { ChatEntry entry = 1; }
 
-message AddChatIgnoreRequest { PlayerIdentity target = 1; }
-message RemoveChatIgnoreRequest { PlayerIdentity target = 1; }
+message AddChatIgnoreRequest {
+  string uuid = 1;
+  PlayerIdentity target = 2;
+}
+
+message RemoveChatIgnoreRequest {
+  string uuid = 1;
+  PlayerIdentity target = 2;
+}
+
+message ChatIgnoreResponse {
+  CallResult result = 1;
+  PlayerIdentity identity = 2;
+}
 
 // ----------------
 // STREAMING
@@ -143,6 +168,13 @@ message PlayerIdentity {
   string name = 2;
 }
 
+message GetPlayerIdentityByNameRequest { string name = 1; }
+
+message GetPlayerIdentityByNameResponse {
+  PlayerIdentity identity = 1;
+  bool exists = 2;
+}
+
 message PlayerSettings {
   bool join_message = 1;
   bool vanish = 2;
@@ -158,6 +190,7 @@ message PlayerEntry {
   int64 last_login = 5;
   repeated string groups = 6;
   PlayerSettings settings = 7;
+  repeated PlayerIdentity player_ignore = 8;
 }
 
 message InitPlayerProfileRequest {

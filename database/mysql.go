@@ -60,6 +60,11 @@ func NewMysqlClient(mysqlConStr, database string) *Mysql {
 		return nil
 	}
 
+	if err := m.client.AutoMigrate(&IgnoreEntry{}); err != nil {
+		logrus.Fatalf("[MySQL] Failed to migrate: %s", err)
+		return nil
+	}
+
 	if err := m.client.AutoMigrate(&KnownUsernames{}); err != nil {
 		logrus.Fatalf("[MySQL] Failed to migrate: %s", err)
 		return nil

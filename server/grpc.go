@@ -10,12 +10,16 @@ import (
 	"github.com/synchthia/systera-api/systerapb"
 	pb "github.com/synchthia/systera-api/systerapb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 type Server interface {
 	Announce(target, msg string)
 	Dispatch(target, cmd string)
-    Chat(entry pb.ChatEntry) error
+
+	Chat(entry pb.ChatEntry) error
+	AddChatIgnore(identity pb.PlayerIdentity) error
+	RemoveChatIgnore(identity pb.PlayerIdentity) error
 
 	InitPlayerProfile(playerUUID, playerName, ipAddress, hostname string) (*systerapb.PlayerEntry, error)
 	FetchPlayerProfile(playerUUID string) (string, string, map[string]bool, error)
@@ -56,6 +60,7 @@ func NewServer(mysql *database.Mysql) *grpcServer {
 
 func NewGRPCServer(mysql *database.Mysql) *grpc.Server {
 	server := grpc.NewServer()
+	reflection.Register(server)
 	pb.RegisterSysteraServer(server, NewServer(mysql))
 	return server
 }
