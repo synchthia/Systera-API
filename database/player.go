@@ -113,8 +113,8 @@ func (pi *PlayerIdentity) ToIgnoreEntry() *IgnoreEntry {
 
 // IgnoreEntry - Ignore chat entry
 type IgnoreEntry struct {
-	PlayersID uint   `gorm:"foreign_key;unique;"` // foreignKey
-	UUID      string `gorm:"foreign_key;unique;"`
+	PlayersID uint   `gorm:"foreign_key;index:idx_ignore,unique;"` // foreignKey
+	UUID      string `gorm:"foreign_key;index:idx_ignore,unique;"`
 	Name      string
 }
 
