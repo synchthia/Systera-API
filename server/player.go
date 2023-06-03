@@ -29,7 +29,7 @@ func (s *grpcServer) GetPlayerIdentityByName(ctx context.Context, e *pb.GetPlaye
 			// Return true when non-nil / false when nil
 			Exists: true,
 		}, nil
-    }
+	}
 }
 
 func (s *grpcServer) InitPlayerProfile(ctx context.Context, e *pb.InitPlayerProfileRequest) (*pb.InitPlayerProfileResponse, error) {
@@ -74,17 +74,12 @@ func (s *grpcServer) SetPlayerGroups(ctx context.Context, e *pb.SetPlayerGroupsR
 }
 
 func (s *grpcServer) SetPlayerServer(ctx context.Context, e *pb.SetPlayerServerRequest) (*pb.Empty, error) {
-	err := s.mysql.SetPlayerServer(e.Uuid, e.ServerName)
+	err := s.mysql.SetPlayerServer(false, e.Uuid, e.ServerName)
 	return &pb.Empty{}, err
 }
 
 func (s *grpcServer) RemovePlayerServer(ctx context.Context, e *pb.RemovePlayerServerRequest) (*pb.Empty, error) {
-	playerData, err := s.mysql.FindPlayer(e.Uuid)
-
-	if e.ServerName == playerData.CurrentServer {
-		err = s.mysql.SetPlayerServer(e.Uuid, "")
-	}
-
+	err := s.mysql.SetPlayerServer(true, e.Uuid, e.ServerName)
 	return &pb.Empty{}, err
 }
 

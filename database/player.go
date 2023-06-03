@@ -261,15 +261,25 @@ func (s *Mysql) SetPlayerGroups(uuid string, groups []string) error {
 }
 
 // SetPlayerServer - Define Player Current Server
-func (s *Mysql) SetPlayerServer(uuid, server string) error {
+func (s *Mysql) SetPlayerServer(isQuit bool, uuid, server string) error {
 	var player Players
-	r := s.client.Model(&Players{}).First(&player, "uuid = ?", uuid)
+	r := s.client.Clauses(clause.Locking{Strength: "UPDATE"}).Model(&Players{}).First(&player, "uuid = ?", uuid)
 	if r.Error != nil {
 		logrus.WithError(r.Error).Errorf("[Player] SPServ: Failed Failed get profile (%s)", uuid)
 		return r.Error
 	}
 
-	player.CurrentServer = server
+	was := player.CurrentServer
+	if isQuit {
+		if player.CurrentServer == server {
+			player.CurrentServer = ""
+		} else {
+			logrus.Debugf("[Player] Skipped update server: %s -> > %s(%s)", player.CurrentServer, server, player.Name, uuid)
+			return nil
+		}
+	} else {
+		player.CurrentServer = server
+	}
 
 	result := s.client.Save(&player)
 
@@ -280,7 +290,7 @@ func (s *Mysql) SetPlayerServer(uuid, server string) error {
 
 	logrus.WithFields(logrus.Fields{
 		"server": server,
-	}).Debugf("[Player] Set Server: %s > %s(%s)", server, player.Name, uuid)
+	}).Debugf("[Player] %v Set Server: %s -> %s > %s(%s)", isQuit, was, server, player.Name, uuid)
 
 	return nil
 }
