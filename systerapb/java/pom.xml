@@ -4,8 +4,8 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>net.synchthia.api</groupId>
-    <artifactId>systera</artifactId>
+    <groupId>net.synchthia</groupId>
+    <artifactId>systera-api</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -20,11 +20,8 @@
         </repository>
 
         <repository>
-            <id>artifact-registry</id>
-            <url>artifactregistry://asia-northeast1-maven.pkg.dev/startail-io/startail-public</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
+            <id>startail-public</id>
+            <url>https://maven.pkg.github.com/synchthia/pkg-startail-public</url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
@@ -32,13 +29,10 @@
     </repositories>
 
     <distributionManagement>
-        <snapshotRepository>
-            <id>artifact-registry</id>
-            <url>artifactregistry://asia-northeast1-maven.pkg.dev/startail-io/startail-public</url>
-        </snapshotRepository>
         <repository>
-            <id>artifact-registry</id>
-            <url>artifactregistry://asia-northeast1-maven.pkg.dev/startail-io/startail-public</url>
+            <id>startail-public</id>
+            <name>GitHub synchthia Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/synchthia/pkg-startail-public</url>
         </repository>
     </distributionManagement>
 
