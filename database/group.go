@@ -18,9 +18,9 @@ type Groups struct {
 // Permissions - Permission Data
 type Permissions struct {
 	ID         uint   `gorm:"primary_key;AutoIncrement;"`
-	GroupsID   uint   `gorm:"foreign_key"` // foreignKey
+	GroupsID   uint   `gorm:"foreign_key;index:perms_index,unique;"` // foreignKey
 	ServerName string `gorm:"primary_key;"`
-	Permission string `gorm:"unique;"`
+	Permission string `gorm:"index:perms_index,unique;"`
 }
 
 // ToProtobuf - Convert to Protobuf
