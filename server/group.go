@@ -12,7 +12,7 @@ func (s *grpcServer) FetchGroups(ctx context.Context, e *pb.FetchGroupsRequest) 
 
 	var allGroups []*pb.GroupEntry
 	for _, group := range groups {
-		allGroups = append(allGroups, group.ToProtobuf(e.ServerName))
+		allGroups = append(allGroups, group.ToProtobuf())
 	}
 
 	return &pb.FetchGroupsResponse{Groups: allGroups}, err
@@ -20,11 +20,11 @@ func (s *grpcServer) FetchGroups(ctx context.Context, e *pb.FetchGroupsRequest) 
 
 func (s *grpcServer) CreateGroup(ctx context.Context, e *pb.CreateGroupRequest) (*pb.Empty, error) {
 	d := database.Groups{}
-	d.Name = e.GroupName
-	d.Prefix = e.GroupPrefix
+	d.Name = e.GroupEntry.GroupName
+	d.Prefix = e.GroupEntry.GroupPrefix
 
 	var dbPerms []database.Permissions
-	for _, v := range e.PermsEntry {
+	for _, v := range e.GroupEntry.Permissions {
 		for _, p := range v.Permissions {
 			perm := database.Permissions{
 				ServerName: v.ServerName,
@@ -40,13 +40,7 @@ func (s *grpcServer) CreateGroup(ctx context.Context, e *pb.CreateGroupRequest) 
 		return &pb.Empty{}, err
 	}
 
-	if dbPerms != nil {
-		for _, sv := range dbPerms {
-			stream.PublishGroup(d.ToProtobuf(sv.ServerName))
-		}
-	} else {
-		stream.PublishGroup(d.ToProtobuf(""))
-	}
+    stream.PublishGroup(d.ToProtobuf())
 
 	return &pb.Empty{}, err
 }
@@ -61,7 +55,7 @@ func (s *grpcServer) AddPermission(ctx context.Context, e *pb.AddPermissionReque
 		return &pb.Empty{}, err
 	}
 	data, err := s.mysql.GetGroupData(e.GroupName)
-	stream.PublishPerms(e.Target, data.ToProtobuf(e.Target))
+	stream.PublishPerms(e.Target, data.ToProtobuf())
 
 	return &pb.Empty{}, err
 }
@@ -71,7 +65,7 @@ func (s *grpcServer) RemovePermission(ctx context.Context, e *pb.RemovePermissio
 		return &pb.Empty{}, err
 	}
 	data, err := s.mysql.GetGroupData(e.GroupName)
-	stream.PublishPerms(e.Target, data.ToProtobuf(e.Target))
+	stream.PublishPerms(e.Target, data.ToProtobuf())
 
 	return &pb.Empty{}, err
 }

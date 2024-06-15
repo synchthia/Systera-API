@@ -24,20 +24,16 @@ type Permissions struct {
 }
 
 // ToProtobuf - Convert to Protobuf
-func (g *Groups) ToProtobuf(serverName string) *systerapb.GroupEntry {
+func (g *Groups) ToProtobuf() *systerapb.GroupEntry {
 	e := &systerapb.GroupEntry{
 		GroupName:   g.Name,
 		GroupPrefix: g.Prefix,
 	}
 
-	for _, p := range g.Permissions {
-		if p.ServerName == "global" {
-			e.GlobalPerms = append(e.GlobalPerms, p.Permission)
-		}
+	permsMap := make(map[string][]string)
 
-		if serverName != "global" && p.ServerName == serverName {
-			e.ServerPerms = append(e.ServerPerms, p.Permission)
-		}
+	for _, p := range g.Permissions {
+		permsMap[p.ServerName] = append(permsMap[p.ServerName], p.Permission)
 	}
 
 	return e
