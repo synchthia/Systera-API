@@ -45,6 +45,7 @@ type SysteraClient interface {
 	FetchGroups(ctx context.Context, in *FetchGroupsRequest, opts ...grpc.CallOption) (*FetchGroupsResponse, error)
 	CreateGroup(ctx context.Context, in *CreateGroupRequest, opts ...grpc.CallOption) (*Empty, error)
 	RemoveGroup(ctx context.Context, in *RemoveGroupRequest, opts ...grpc.CallOption) (*Empty, error)
+	UpdateGroup(ctx context.Context, in *UpdateGroupRequest, opts ...grpc.CallOption) (*Empty, error)
 	AddPermission(ctx context.Context, in *AddPermissionRequest, opts ...grpc.CallOption) (*Empty, error)
 	RemovePermission(ctx context.Context, in *RemovePermissionRequest, opts ...grpc.CallOption) (*Empty, error)
 }
@@ -246,6 +247,15 @@ func (c *systeraClient) RemoveGroup(ctx context.Context, in *RemoveGroupRequest,
 	return out, nil
 }
 
+func (c *systeraClient) UpdateGroup(ctx context.Context, in *UpdateGroupRequest, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/systerapb.Systera/UpdateGroup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *systeraClient) AddPermission(ctx context.Context, in *AddPermissionRequest, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
 	err := c.cc.Invoke(ctx, "/systerapb.Systera/AddPermission", in, out, opts...)
@@ -291,6 +301,7 @@ type SysteraServer interface {
 	FetchGroups(context.Context, *FetchGroupsRequest) (*FetchGroupsResponse, error)
 	CreateGroup(context.Context, *CreateGroupRequest) (*Empty, error)
 	RemoveGroup(context.Context, *RemoveGroupRequest) (*Empty, error)
+	UpdateGroup(context.Context, *UpdateGroupRequest) (*Empty, error)
 	AddPermission(context.Context, *AddPermissionRequest) (*Empty, error)
 	RemovePermission(context.Context, *RemovePermissionRequest) (*Empty, error)
 }
@@ -361,6 +372,9 @@ func (UnimplementedSysteraServer) CreateGroup(context.Context, *CreateGroupReque
 }
 func (UnimplementedSysteraServer) RemoveGroup(context.Context, *RemoveGroupRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveGroup not implemented")
+}
+func (UnimplementedSysteraServer) UpdateGroup(context.Context, *UpdateGroupRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateGroup not implemented")
 }
 func (UnimplementedSysteraServer) AddPermission(context.Context, *AddPermissionRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddPermission not implemented")
@@ -758,6 +772,24 @@ func _Systera_RemoveGroup_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Systera_UpdateGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SysteraServer).UpdateGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/systerapb.Systera/UpdateGroup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SysteraServer).UpdateGroup(ctx, req.(*UpdateGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Systera_AddPermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AddPermissionRequest)
 	if err := dec(in); err != nil {
@@ -884,6 +916,10 @@ var Systera_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveGroup",
 			Handler:    _Systera_RemoveGroup_Handler,
+		},
+		{
+			MethodName: "UpdateGroup",
+			Handler:    _Systera_UpdateGroup_Handler,
 		},
 		{
 			MethodName: "AddPermission",

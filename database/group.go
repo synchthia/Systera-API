@@ -31,11 +31,20 @@ func (g *Groups) ToProtobuf() *systerapb.GroupEntry {
 	}
 
 	permsMap := make(map[string][]string)
+	perms := []*systerapb.PermissionsEntry{}
 
 	for _, p := range g.Permissions {
 		permsMap[p.ServerName] = append(permsMap[p.ServerName], p.Permission)
 	}
 
+	for serverName, permissions := range permsMap {
+		perms = append(perms, &systerapb.PermissionsEntry{
+			ServerName:  serverName,
+			Permissions: permissions,
+		})
+	}
+
+	e.Permissions = perms
 	return e
 }
 
@@ -86,6 +95,27 @@ func (s *Mysql) RemoveGroup(groupName string) error {
 	r := s.client.Select("Permissions").Delete(&Groups{}, "name = ?", groupName)
 	if r.Error != nil {
 		return r.Error
+	}
+
+	return nil
+}
+
+// UpdateGroup - Update Group
+func (s *Mysql) UpdateGroup(newGroup Groups) error {
+	group := Groups{}
+	r := s.client.First(&group, "name = ?", newGroup.Name)
+
+	if r.RowsAffected == 0 {
+		return errors.New("group does not exists")
+	} else if r.Error != nil && r.RowsAffected != 0 {
+		return r.Error
+	}
+	newGroup.ID = group.ID
+
+	result := r.Save(&newGroup)
+
+	if result.Error != nil {
+		return result.Error
 	}
 
 	return nil
