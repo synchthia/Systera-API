@@ -73,7 +73,7 @@ func (s *Mysql) GetAllGroup() ([]Groups, error) {
 
 // CreateGroup - Create New Group
 func (s *Mysql) CreateGroup(group Groups) error {
-	r := s.client.First(&Groups{}, "name = ?", group.Name)
+	r := s.client.Preload("Permissions").First(&Groups{}, "name = ?", group.Name)
 
 	if r.RowsAffected != 0 {
 		return errors.New("group already exists")
